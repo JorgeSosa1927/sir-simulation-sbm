@@ -1,0 +1,535 @@
+% Estructura de capítulo para el modelo de metapoblaciones DC-SBM
+
+\section{Introduccion}
+
+Las epidemias respiratorias en contextos urbanos se caracterizan por una combinacion de alta densidad poblacional, patrones de movilidad complejos y una fuerte heterogeneidad espacial. A diferencia de los modelos teoricos ideales, las ciudades reales estan formadas por barrios funcionalmente diferenciados (zonas residenciales, centros de trabajo, espacios de ocio) conectados por redes de transporte y rutinas diarias que generan patrones de contacto altamente estructurados. Estas estructuras condicionan tanto la velocidad de propagacion de un patogeno como la efectividad de las intervenciones no farmaceuticas, por ejemplo confinamientos, cierres selectivos o restricciones de movilidad.
+
+Modelar de forma realista estos fenomenos implica capturar no solo el numero promedio de contactos, sino tambien la organizacion de la red que los sostiene: quien se relaciona con quien, en que tipo de lugar y con que frecuencia. La ausencia de estos elementos estructurales tiende a producir modelos que subestiman la incertidumbre o generan resultados artificialmente optimistas sobre el control de la epidemia. Por ello, resulta necesario desarrollar marcos de modelado que integren informacion estructural de la ciudad y, al mismo tiempo, sigan siendo computacionalmente manejables.
+
+\subsection{Contexto epidemiologico y urbano}
+
+En las ultimas decadas, multiples brotes de infecciones respiratorias agudas han puesto de manifiesto el papel central de las grandes ciudades como motores de propagacion. La combinacion de hogares densos, centros de trabajo concentrados, sistemas de transporte saturados y espacios de ocio populares produce una red de contactos con propiedades muy alejadas de la mezcla homogenea. En este contexto, factores como la friccion espacial (la dificultad efectiva para que una infeccion salte entre zonas), la segregacion funcional de la ciudad y la movilidad laboral diaria se convierten en determinantes de primer orden para la dinamica epidemica.
+
+Ademas, las respuestas sociales y politicas ante un brote (por ejemplo, trabajo remoto, cierres de escuelas, reduccion de aforos) no actuan de forma uniforme en todo el territorio, sino que alteran de manera selectiva ciertos tipos de conexiones. Esto refuerza la necesidad de trabajar con modelos que representen explicitamente capas de interaccion asociadas a lugares concretos (hogar, trabajo, ocio, transporte), y no unicamente promedios globales de contacto.
+
+\subsection{Modelos clasicos: campo medio vs modelos basados en agentes}
+
+La literatura epidemiologica ha desarrollado dos familias de modelos ampliamente utilizadas. Por un lado, los modelos compartimentales de campo medio (por ejemplo, SIR o extensiones similares) describen la evolucion de grupos de individuos en distintos estados de salud mediante sistemas de ecuaciones diferenciales. Estos modelos son simples, transparentes y eficientes, pero suponen una poblacion bien mezclada o, en el mejor de los casos, dividida en pocos estratos. Como consecuencia, capturan mal los efectos de estructura de red, la aparicion de focos locales o la importancia de los superdifusores.
+
+Por otro lado, los modelos basados en agentes y las simulaciones sobre redes complejas introducen individuos explicitos y patrones de contacto detallados. En estos enfoques, cada nodo representa una persona y las aristas codifican interacciones potenciales, lo que permite incorporar topologias realistas (mundo pequeno, scale-free, bloques, etc.) y procesos estocasticos ricos. Sin embargo, este nivel de detalle tiene un coste: los modelos se vuelven costosos de simular, dificiles de calibrar y muy sensibles a supuestos micro que a menudo no estan respaldados por datos observacionales.
+
+\subsection{Dilema de la complejidad: realismo vs tractabilidad}
+
+Existe por tanto un dilema central en el modelado de epidemias urbanas: los modelos muy detallados prometen mayor realismo pero introducen una explosion de parametros y decisiones de diseño que aumentan la incertidumbre total del sistema; los modelos demasiado simples son tractables y faciles de analizar, pero pasan por alto la estructura urbana que condiciona la propagacion real de la enfermedad. En la practica, muchas aplicaciones acaban optando por topologias genericas (por ejemplo, redes Barabasi–Albert) o supuestos de mezcla casi homogenea, lo que lleva a subestimar los efectos de friccion espacial y segregacion funcional.
+
+Este trabajo parte de la hipotesis de que es posible construir un punto intermedio: un modelo suficientemente estructurado para representar hogares, centros de trabajo y patrones de movilidad de forma parsimoniosa, pero lo bastante compacto como para ser simulado masivamente, explorado en escenarios y utilizado como base para modelos sustitutos (surrogates) de aprendizaje de maquina. El reto consiste en preservar la fisica relevante de la interaccion (quien se encuentra donde, con que frecuencia y bajo que condiciones) sin caer en el nivel de detalle individuo a individuo.
+
+\subsection{Motivacion y objetivos generales de la tesis}
+
+La motivacion principal de esta tesis es reducir la incertidumbre en la simulacion de epidemias urbanas mediante el diseño de una red sintetica de contactos que sea, a la vez, realista, escalable y consciente de la friccion espacial. En lugar de basarse en redes genericas o en modelos puramente agregados, se propone construir una red a nivel de hogar o manzana urbana utilizando un modelo de bloques estocasticos corregido por grado (DC-SBM), enriquecido con un mecanismo de proyeccion de lugares de trabajo y ocio, y con un modelo SIR implementado sobre matrices dispersas.
+
+De forma mas concreta, los objetivos generales son:
+
+\begin{itemize}
+    \item Diseñar una representacion de la ciudad como red de metapoblaciones (hogares o manzanas) que integre de forma explicita la segregacion funcional entre zonas residenciales, de trabajo y de ocio.
+    \item Incorporar mecanismos de friccion espacial y dinamica (por ejemplo, reduccion de pesos de contacto ante intervenciones) que permitan simular respuestas conductuales y politicas sin redefinir toda la red.
+    \item Desarrollar un esquema de simulacion SIR eficiente, basado en algebra lineal dispersa, que permita explorar barridos de parametros y escenarios de forma sistematica.
+    \item Generar datos simulados estructurados que puedan ser utilizados para entrenar modelos sustitutos de aprendizaje de maquina, reduciendo el coste computacional de analisis de escenarios a gran escala.
+\end{itemize}
+
+\subsection{Estructura del trabajo}
+
+A partir de esta introduccion, el trabajo se organiza de la siguiente manera. En el siguiente capitulo se presenta el marco teorico y los trabajos relacionados, abarcando modelos SIR en metapoblaciones, redes complejas y modelos de bloques estocasticos con correccion por grado. Posteriormente, se describe la evolucion conceptual del modelo, desde un enfoque hibrido inicial basado en redes genericas hasta la arquitectura de metapoblaciones DC-SBM propuesta.
+
+En el capitulo dedicado a la descripcion matematica se formaliza la construccion de la red, la asignacion de pesos de contacto y la dinamica SIR sobre la red de metapoblaciones. A continuacion, se detalla la implementacion computacional y el diseño experimental para explorar escenarios y analizar sensibilidad a parametros. Finalmente, se presentan los resultados, se discuten sus implicaciones para el modelado de epidemias urbanas y se proponen lineas de trabajo futuro, incluyendo el uso de modelos sustitutos para acelerar la evaluacion de politicas.
+
+
+
+
+
+
+%------------------------------------------------
+
+\section{Marco teorico y trabajos relacionados}
+
+El estudio de epidemias en entornos urbanos se apoya en tres pilares principales: 
+(1) los modelos compartimentales clasicos, como el SIR, y sus extensiones en metapoblaciones; 
+(2) la teoria de redes complejas, que aporta una descripcion estructural de los contactos; 
+y (3) enfoques recientes que combinan estos modelos con herramientas de inteligencia artificial, ya sea en esquemas hibridos o mediante modelos sustitutos (surrogates). 
+En esta seccion se presenta una sintesis de estos tres ejes, situando el modelo propuesto dentro de la literatura existente.
+
+\subsection{Modelos SIR/SEIR y metapoblaciones}
+
+Los modelos compartimentales SIR/SEIR describen la dinamica de una epidemia mediante ecuaciones que agrupan a la poblacion en unos pocos estados (Susceptible, Infectado, Recuperado, y en algunos casos Expuesto). 
+En su version mas simple, estos modelos asumen una poblacion homogeneamente mezclada, donde cada individuo tiene la misma probabilidad de interactuar con cualquier otro. 
+Esta hipotesis permite derivar ecuaciones diferenciales ordinarias relativamente sencillas, pero resulta poco realista en el contexto de ciudades grandes y espacialmente heterogeneas.
+
+Para introducir estructura espacial sin abandonar la simplicidad del marco compartimental, se han desarrollado los modelos de metapoblaciones. 
+En ellos, la poblacion se divide en parches o nodos (barrios, ciudades, regiones) que interactuan entre si a traves de flujos de movilidad. 
+Cada parche sigue internamente un modelo SIR/SEIR, mientras que las conexiones entre parches representan viajes diarios, transporte, migracion o intercambio de poblacion. 
+Este enfoque permite capturar fenomenos como la aparicion de focos locales, retrasos en la propagacion entre regiones y efectos de friccion espacial.
+
+En la literatura reciente, los modelos de metapoblaciones se han utilizado para estudiar la propagacion de infecciones respiratorias en redes de ciudades, aeropuertos o barrios urbanos, combinando matrices de movilidad con dinamicas compartimentales. 
+Sin embargo, muchos de estos trabajos se apoyan en estructuras de conectividad relativamente simples (por ejemplo, redes completas entre regiones o matrices de movilidad agregadas) que no siempre reflejan la segregacion funcional y la jerarquia interna de una ciudad moderna. 
+Esto motiva la busqueda de modelos de metapoblaciones donde la topologia no sea arbitraria, sino que derive de un modelo generativo explicito de la red urbana.
+
+\subsection{Modelos de redes complejas y DC-SBM}
+
+La teoria de redes complejas ofrece una familia de modelos generativos para describir la estructura de contacto entre individuos o unidades espaciales. 
+Entre los modelos mas conocidos se encuentran las redes de Erdos–Renyi (conectividad aleatoria uniforme), las redes de mundo pequeno de Watts–Strogatz (alta clustering y distancias cortas) y las redes scale-free de Barabasi–Albert (distribuciones de grado con colas pesadas). 
+Estos modelos han sido ampliamente utilizados en epidemiologia matematica para explorar el impacto de la heterogeneidad de grado, la presencia de nodos superdifusores y las propiedades de mundo pequeno en la propagacion de enfermedades.
+
+No obstante, estos modelos clasicos presentan limitaciones cuando se intenta representar la estructura funcional de una ciudad. 
+En particular, no incorporan de manera natural la existencia de comunidades o bloques bien diferenciados (por ejemplo, zonas residenciales, centros de trabajo, zonas de ocio) ni permiten controlar de forma directa las tasas de mezcla entre estos grupos. 
+Como consecuencia, capturan algunas propiedades globales de las redes urbanas, pero no su organizacion jerarquica ni su segregacion espacial.
+
+El modelo Stochastic Block Model (SBM) y su version corregida por grado, el Degree-Corrected SBM (DC-SBM), abordan estas limitaciones introduciendo bloques latentes y una distribucion de grados controlada. 
+En el DC-SBM, cada nodo pertenece a un bloque (por ejemplo, residencial, trabajo, ocio) y se le asigna un parametro de "sociabilidad" que regula su grado esperado. 
+La probabilidad de una arista entre dos nodos depende tanto de sus tipos de bloque como de sus sociabilidades individuales, a traves de una matriz de mezcla que actua como "receta" de conectividad entre comunidades.
+
+Este enfoque es especialmente adecuado para modelar ciudades donde coexisten zonas fuertemente conectadas (centros de trabajo, hubs de transporte) y zonas mas perifericas (barrios residenciales), manteniendo al mismo tiempo una distribucion de grados heterogenea. 
+Al construir la red de contactos a partir de un DC-SBM, es posible representar de forma explicita la segregacion funcional de la ciudad y la existencia de nodos de alta centralidad, sin recurrir a topologias ad hoc o puramente empiricas.
+
+\subsection{Enfoques hibridos y modelos sustitutos}
+
+Ademas de los modelos puramente compartimentales o basados en redes, la literatura reciente ha explorado enfoques hibridos que combinan simulaciones basadas en agentes (IBM) con modelos de ecuaciones diferenciales. 
+En estos esquemas, una poblacion sintetica detallada se simula inicialmente mediante un modelo IBM sobre una red de contactos explicita; posteriormente, cuando la epidemia alcanza ciertos umbrales, la dinamica se aproxima mediante un modelo mas agregado (por ejemplo, SEIR) para reducir el coste computacional. 
+Este tipo de enfoque busca aprovechar el realismo del IBM en las fases iniciales y la eficiencia del modelo continuo en fases avanzadas.
+
+Sin embargo, los modelos hibridos presentan desafios importantes. 
+La decision de cuando y como cambiar de un modelo a otro introduce puntos de ruptura que pueden generar artefactos en la dinamica (por ejemplo, cambios bruscos en la friccion espacial o en la estructura de contactos efectiva). 
+Ademas, cuando la poblacion sintetica subyacente es extremadamente compleja (por ejemplo, millones de individuos con rutinas heterogeneas en una ciudad grande), la incertidumbre sobre la topologia real y los patrones de movilidad puede propagarse al modelo y dificultar su calibracion y validacion.
+
+Frente a estos problemas, han surgido los modelos sustitutos (surrogates) basados en inteligencia artificial. 
+En este enfoque, en lugar de acoplar directamente un modelo IBM con un modelo de ecuaciones diferenciales, se utilizan simulaciones detalladas para entrenar un modelo de aprendizaje de maquina (por ejemplo, un autoencoder o una red neural profunda) que aprenda a mapear estados de entrada a salidas epidemicas agregadas. 
+Una vez entrenado, el surrogate puede aproximar la dinamica del modelo complejo con un coste computacional muy reducido, permitiendo explorar miles de escenarios en tiempos muy cortos.
+
+Los resultados reportados en trabajos recientes muestran que, cuando el sistema subyacente esta bien definido y la estructura de la red es aprendible (es decir, esta regida por reglas matematicas claras mas que por datos caoticos o incompletos), estos surrogates alcanzan niveles de ajuste elevados (por ejemplo, valores de $R^2$ superiores a 0.8–0.9) en tareas de prediccion de trayectorias epidemicas, y pueden acelerar la simulacion en varios ordenes de magnitud. 
+Al mismo tiempo, la experiencia con poblaciones sinteticas extremadamente detalladas indica que, si la red original incorpora demasiada complejidad mal observada, el surrogate tiende a aprender ruido en lugar de estructura.
+
+En este contexto, el modelo propuesto en esta tesis se situa en un punto intermedio: utiliza un modelo generativo de red (DC-SBM) suficientemente estructurado y controlable para representar la ciudad como metapoblaciones topologicas, y se plantea su uso posterior como base para entrenar modelos sustitutos de bajo coste. 
+De este modo, se aprovechan las ventajas de los enfoques en red y de los surrogates, evitando al mismo tiempo la explosion de complejidad asociada a las poblaciones sinteticas individuo a individuo.
+
+
+%------------------------------------------------
+
+\section{Evolucion conceptual del modelo}
+
+El modelo actual de metapoblaciones DC-SBM no aparecio de forma directa, sino como resultado de una serie de correcciones conceptuales sobre un disenio inicial inspirado en modelos hibridos de la literatura. En esta seccion se resume esa trayectoria: desde el primer generador de datos, basado en redes genericas y un esquema hibrido individuo–ecuaciones diferenciales, hasta la arquitectura final centrada en manzanas urbanas, proyeccion bipartita y pesos de riesgo epidemiologico.
+
+\subsection{Diagnostico inicial del modelo hibrido}
+
+El punto de partida fue el enfoque hibrido descrito en trabajos previos, en el que una simulacion basada en agentes (IBM) se acoplaba con un modelo compartimental rapido (por ejemplo, SIR/SEIR) para acelerar la simulacion una vez que la epidemia alcanzaba cierto tamano. La idea original de la tesis era utilizar ese esquema para generar datos detallados y entrenar un modelo sustituto (surrogate) de inteligencia artificial capaz de reproducir la dinamica de la epidemia en tiempo real.
+
+Sin embargo, al analizar con detalle el generador de datos inicial se identificaron tres problemas estructurales:
+
+\begin{itemize}
+    \item \textbf{Topologias genericas:} la red de contactos se construia con modelos como Barabasi–Albert o grafos aleatorios, que no representan la segregacion funcional real de una ciudad (barrios residenciales, centros de trabajo, zonas de ocio).
+    \item \textbf{Ausencia de friccion espacial:} la ciudad se mezclaba casi homogeneamente desde las primeras etapas, lo que eliminaba diferencias entre zonas y volvia poco realistas los tiempos de propagacion entre barrios.
+    \item \textbf{Falta de fisica de contacto:} las aristas eran binarias (0 o 1), sin distinguir entre tipos de interaccion tan distintos como compartir oficina ocho horas al dia o cruzarse brevemente en una tienda.
+\end{itemize}
+
+Ademas, el cambio de un modelo IBM complejo a un modelo continuo mas simple introducia una transicion binaria dificil de justificar desde el punto de vista epidemiologico y urbano. En lugar de reducir la incertidumbre, la arquitectura hibrida corria el riesgo de introducir artefactos en la dinamica. Este diagnostico llevo a replantear el problema desde la base.
+
+\subsection{Del hogar individual a las metapoblaciones}
+
+La primera decision estructural fue cambiar la unidad de simulacion. En lugar de trabajar con individuos explicitos, se adopto una renormalizacion de la poblacion a nivel de hogar o manzana urbana. Cada nodo del grafo deja de ser una persona aislada y pasa a representar una pequena unidad geografica con una poblacion interna de orden decenas de habitantes.
+
+Este cambio tiene varias implicaciones:
+
+\begin{itemize}
+    \item Reduce el espacio de estados en varios ordenes de magnitud, haciendo posible realizar simulaciones estocasticas masivas sin sacrificar detalle espacial.
+    \item Permite modelar la dinamica de contagio intradomiciliario de forma mas controlada (por ejemplo, mediante reglas tipo chain binomial o un SIR discreto dentro del hogar), separando claramente los mecanismos internos de los externos.
+    \item Facilita la interpretacion urbana: un nodo ya no es un ente abstracto, sino una pieza de la ciudad (manzana, edificio, conjunto de viviendas) conectada a la infraestructura de transporte y a los centros de actividad.
+\end{itemize}
+
+En esta nueva escala meso (entre el individuo y la ciudad completa) se abre la posibilidad de dise{n}ar una topologia que refleje mejor la jerarquia urbana sin llegar a la complejidad extrema de una poblacion sintetica individuo por individuo.
+
+\subsection{Proyeccion bipartita y colapso de centros}
+
+Una vez elegida la escala de manzanas u hogares, surgio el problema de representar los lugares de trabajo, estudio y ocio. La idea intuitiva era conectar directamente los hogares cuyos habitantes comparten un centro (por ejemplo, una oficina o una escuela). Sin embargo, el intento de modelar esto con nodos "Persona" y nodos "Oficina" duplicaba la complejidad:
+
+\begin{itemize}
+    \item aparecia el riesgo de contar dos veces a la misma persona (como individuo y como nodo empleado);
+    \item se volvia ambiguo el estado epidemiologico de los lugares fisicos (¿se infecta la oficina?, ¿propaga contagio por si misma?);
+    \item la simulacion se hacia mas pesada sin aportar claridad conceptual.
+\end{itemize}
+
+La solucion fue adoptar una estrategia de \emph{proyeccion bipartita} o \emph{generar y colapsar}:
+
+\begin{enumerate}
+    \item Se genera una red \emph{expandida} que incluye tanto nodos de hogares como nodos de lugares (oficinas, centros, espacios de ocio), utilizando un DC-SBM con tipos funcionales y una matriz de mezcla que hace que los hubs (centros) sean islas muy atractivas.
+    \item Cada hogar se conecta a uno o varios de estos lugares segun su perfil de movilidad y el diseno topologico.
+    \item A continuacion, se \emph{colapsan} los lugares: se eliminan los nodos fisicos correspondientes y se sustituyen por cliques (conexiones todos-con-todos) entre los hogares que compartian ese lugar.
+    \item El resultado final es una red \emph{pura de hogares}, donde las conexiones densas codifican implicitamente la existencia de centros de trabajo o estudio compartidos.
+\end{enumerate}
+
+Con esta maniobra se conserva la estructura densa y jerarquica de las relaciones laborales y de movilidad, pero el grafo final solo contiene un tipo de nodo (hogares/manzanas). Esto simplifica la implementacion del modelo SIR y permite trabajar con una topologia mas cercana a la estructura real de la ciudad.
+
+\subsection{Introduccion de la fisica de contacto}
+
+Superado el problema topologico, el siguiente paso fue dotar a las aristas de contenido fisico y epidemiologico. No todos los contactos tienen el mismo riesgo: pasar ocho horas en una oficina cerrada con las mismas personas no es equivalente a caminar cinco minutos por un parque concurrido.
+
+Para capturar esta idea se introdujo una tabla de pesos de contacto basada en tres componentes principales:
+
+\begin{itemize}
+    \item \textbf{Frecuencia} $f_{ij}$: cuan a menudo ocurre el contacto entre las poblaciones asociadas a los nodos $i$ y $j$ (visitas diarias al trabajo, viajes semanales, encuentros esporadicos).
+    \item \textbf{Duracion} $d_{ij}$: cuanto tiempo dura cada episodio de contacto (horas de jornada laboral, minutos en el transporte, segundos en un cruce casual).
+    \item \textbf{Aglutinamiento} $c_{ij}$: que tan concentradas estan las personas en el espacio donde ocurre el contacto (oficina cerrada, aula, autobus, espacio abierto).
+\end{itemize}
+
+A partir de estos factores se define un \emph{riesgo basal} para cada tipo de enlace (trabajo, escuela, transporte, vecindario, ocio), que luego se convierte en un peso de arista $W_{ij}$ normalizado. Estos pesos multiplican la contribucion externa a la tasa de contagio, diferenciando de forma explicita los contextos de interaccion.
+
+Finalmente, para modelar intervenciones y cambios de comportamiento sin reconstruir la red, se introdujo un mecanismo de \emph{friccion dinamica}: factores de escala temporales que reducen (o aumentan) los pesos de ciertas categorias de aristas (por ejemplo, transporte y trabajo) en respuesta a confinamientos, teletrabajo o reaperturas. De este modo, la estructura topologica permanece estable y las politicas se representan como cambios continuos en la intensidad de los contactos.
+
+\subsection{Estratificacion poblacional movil/estatica}
+
+El ultimo ajuste conceptual clave fue clarificar el papel de la movilidad. En un primer momento, la movilidad se interpreto de forma casi geometrica, como si los nodos se desplazaran en un espacio fisico continuo. Sin embargo, en el marco de metapoblaciones en red, la movilidad es mejor entendida como un \emph{atributo de conectividad}: hasta que punto la poblacion de un nodo utiliza las aristas que lo conectan con otros nodos.
+
+Esto condujo a una estratificacion interna de la poblacion en cada manzana:
+
+\begin{itemize}
+    \item una \textbf{fraccion movil}, asociada a personas que realizan desplazamientos regulares (trabajo, estudio, transporte) y que, por tanto, participan activamente en los contactos externos sobre la red;
+    \item una \textbf{fraccion estatica}, asociada a personas con movilidad reducida o centrada casi exclusivamente en el entorno inmediato (hogar, barrio cercano).
+\end{itemize}
+
+En terminos de modelado, esta distincion se traduce en duplicar los compartimentos SIR en cada nodo (por ejemplo, $S_M, I_M, R_M$ para la poblacion movil y $S_E, I_E, R_E$ para la estatica) y en hacer que los efectos de los pesos $W_{ij}$ actuen principalmente sobre la fraccion movil. La friccion dinamica reduce de forma directa la intensidad de los contactos externos de la poblacion movil, mientras que las interacciones intradomiciliarias se mantienen activas incluso bajo confinamientos estrictos.
+
+Esta ultima capa de refinamiento permite que el modelo refleje de manera mas realista politicas como el teletrabajo o el cierre de escuelas, donde no se apaga la ciudad completa, sino que se modula selectivamente la conectividad de ciertos grupos y lugares. Con ello se cierra la evolucion conceptual del modelo, dejando lista la arquitectura para su formalizacion matematica y su implementacion computacional.
+
+
+%------------------------------------------------
+
+\section{Metodologia general y pasos siguientes}
+
+A partir del marco teorico y de la evolucion conceptual del modelo, los siguientes pasos de la tesis se organizan en cuatro bloques metodologicos: 
+(i) la descripcion matematica detallada del modelo de red y de la dinamica SIR; 
+(ii) su implementacion computacional en Python; 
+(iii) el diseno experimental para explorar escenarios y sensibilidad a parametros; 
+y (iv) el desarrollo de un modelo sustituto (surrogate) basado en aprendizaje de maquina. 
+Esta seccion resume el contenido y el proposito de cada uno de estos bloques, que se desarrollaran en los capitulos posteriores.
+
+\subsection{Descripcion matematica del modelo}
+
+El modelo propuesto describe una epidemia SIR sobre una red de metapoblaciones (manzanas u hogares) generada mediante un modelo DC--SBM, enriquecido con una proyeccion de centros de trabajo/ocio y con una dinamica estratificada en poblacion movil y estatica. A continuacion se presentan las estructuras matematicas principales.
+
+\paragraph*{Topologia macro: red DC--SBM expandida.}
+
+Sea $\tilde{G} = (\tilde{V}, \tilde{E})$ la red \emph{expandida} con $N_{\text{temp}} = |\tilde{V}|$ nodos, que incluye:
+\[
+\tilde{V} = V_R \cup V_P \cup V_C,
+\]
+donde $V_R$ son nodos residenciales (refugio), $V_P$ nodos puente y $V_C$ centros (hubs de trabajo/ocio).
+
+Cada nodo $i$ tiene un tipo de bloque
+\[
+g_i \in \{0,1,2\} \equiv \{\text{residencial}, \text{puente}, \text{centro}\},
+\]
+asignado segun proporciones
+\[
+\mathbb{P}(g_i = k) = \alpha_k, \qquad \sum_{k=0}^2 \alpha_k = 1.
+\]
+
+En el modelo DC--SBM, a cada nodo se le asocia un parametro de sociabilidad $\theta_i > 0$ (controlado en la practica por el tamanio de la poblacion movil en el nodo y por el tipo de bloque). Se define una matriz de mezcla entre bloques
+\[
+B = (B_{ab})_{a,b \in \{0,1,2\}}, \qquad B_{ab} \ge 0,
+\]
+que fija la intensidad de conexion entre tipos de nodos.
+
+La probabilidad de una arista entre dos nodos $i \ne j$ en la red expandida se modela como
+\begin{equation}
+  \mathbb{P}(\tilde{A}_{ij} = 1 \mid g_i, g_j, \theta_i, \theta_j)
+  = \min\!\left\{ \theta_i \theta_j B_{g_i g_j},\, 1 \right\},
+\end{equation}
+donde $\tilde{A}$ es la matriz de adyacencia de $\tilde{G}$. Con una eleccion adecuada de $B$ y de la distribucion de las $\theta_i$ se puede reproducir, en promedio, un grado objetivo $\bar{k}_{\text{temp}}$ para la red expandida.
+
+\paragraph*{Proyeccion bipartita y red final de hogares.}
+
+Sobre la red expandida distinguimos:
+
+- nodos de hogares $V_H = V_R \cup V_P$ (manzanas u hogares),  
+- nodos de centros $V_C$ (hubs de trabajo/ocio).
+
+La estructura que interesa para la proyeccion es esencialmente bipartita entre $V_H$ y $V_C$. Denotemos por $\tilde{A}^{(HC)}$ la submatriz de $\tilde{A}$ que recoge aristas hogar–centro, y por $\tilde{A}^{(HH)}$ las aristas de vecindario entre hogares.
+
+La red final $G = (V,E)$ es unimodal, con
+\[
+V = V_H, \qquad |V| = N,
+\]
+y se construye colapsando los centros:
+\begin{equation}
+  A^{\text{work}}_{ij}
+  = \sum_{h \in V_C} \mathbf{1}\{ (i,h) \in \tilde{E},\, (j,h) \in \tilde{E} \},
+  \qquad i,j \in V_H,
+\end{equation}
+es decir, $A^{\text{work}}_{ij}$ cuenta cuantos hubs comparten los hogares $i$ y $j$. Las aristas de vecindario se conservan como
+\[
+A^{\text{neigh}}_{ij} = \tilde{A}^{(HH)}_{ij}.
+\]
+
+La matriz de adyacencia combinada se escribe entonces como
+\begin{equation}
+  A_{ij} = \mathbf{1}\{A^{\text{neigh}}_{ij} > 0 \text{ o } A^{\text{work}}_{ij} > 0\}, 
+  \qquad i,j \in V.
+\end{equation}
+
+\paragraph*{Pesos de arista y friccion dinamica.}
+
+Cada arista $(i,j)$ puede estar asociada a uno o varios \emph{tipos de contacto} $k$ (por ejemplo, vecindario, trabajo, transporte, ocio). Para cada tipo $k$ se define un peso basal
+\begin{equation}
+  w_k = f_k \, d_k \, c_k,
+\end{equation}
+donde $f_k$ es la frecuencia de contactos, $d_k$ la duracion media y $c_k$ un factor de aglutinamiento (que captura que tan concentradas estan las personas en el espacio correspondiente).
+
+El peso epidemiologico total de la arista $(i,j)$ se define como
+\begin{equation}
+  W_{ij} = \sum_{k} w_k \, \mathbf{1}\{ \text{existe contacto de tipo } k \text{ entre } i \text{ y } j \}.
+\end{equation}
+
+Para representar intervenciones o cambios de comportamiento se introduce una friccion dinamica $\phi_k(t) \in (0,1]$ por tipo de contacto, de modo que el peso efectivo en el tiempo es
+\begin{equation}
+  \tilde{W}_{ij}(t) = \sum_{k} \phi_k(t) \, w_k \, \mathbf{1}\{ \text{contacto tipo } k \}.
+\end{equation}
+
+Definimos la matriz de pesos efectiva en el tiempo como
+\begin{equation}
+  M(t) = \big( \tilde{W}_{ij}(t) \big)_{i,j=1}^N.
+\end{equation}
+
+\paragraph*{Demografia interna de los nodos.}
+
+Cada nodo $i \in V_H$ representa una manzana con una poblacion total $N_i$. Para nodos residenciales y puente se asume que
+\begin{equation}
+  N_i \sim \max\{1,\ \text{round}(\mathcal{N}(\mu_{g_i}, \sigma_{g_i}^2))\},
+\end{equation}
+donde los parametros $(\mu_{g_i}, \sigma_{g_i})$ dependen del tipo de nodo (residencial o puente).
+
+La poblacion se divide en fraccion movil y estatica. La cantidad de individuos moviles en el nodo $i$ se modela como
+\begin{equation}
+  N_i^{M} \sim \text{Binomial}\big(N_i,\, p^{\text{mob}}_{g_i}\big),
+\end{equation}
+y la fraccion estatica es
+\begin{equation}
+  N_i^{E} = N_i - N_i^{M}.
+\end{equation}
+
+\paragraph*{Dinamica SIR estratificada.}
+
+En cada nodo $i$ se consideran seis compartimentos:
+\[
+S_i^M(t),\ I_i^M(t),\ R_i^M(t) \quad \text{(poblacion movil),}
+\]
+\[
+S_i^E(t),\ I_i^E(t),\ R_i^E(t) \quad \text{(poblacion estatica).}
+\]
+En todo tiempo
+\[
+S_i^M(t) + I_i^M(t) + R_i^M(t) = N_i^M, \qquad
+S_i^E(t) + I_i^E(t) + R_i^E(t) = N_i^E.
+\]
+
+La fuerza de infeccion \emph{interna} en el nodo $i$ se define como
+\begin{equation}
+  \lambda_i^{\text{int}}(t)
+  = \beta_{\text{loc}} \big( I_i^M(t) + I_i^E(t) \big),
+\end{equation}
+donde $\beta_{\text{loc}}$ controla la tasa de contagio intracomunidad.
+
+La fuerza de infeccion \emph{externa} debida a la movilidad de la poblacion movil se escribe como
+\begin{equation}
+  \lambda_i^{\text{ext}}(t)
+  = \beta_{\text{net}} \sum_{j=1}^N M_{ij}(t)\, I_j^M(t),
+\end{equation}
+donde $\beta_{\text{net}}$ controla la intensidad de contagio a traves de la red.
+
+La fuerza de infeccion total percibida por la poblacion movil es
+\begin{equation}
+  \Lambda_i^M(t) = \lambda_i^{\text{int}}(t) + \lambda_i^{\text{ext}}(t),
+\end{equation}
+mientras que la poblacion estatica solo percibe el componente interno:
+\begin{equation}
+  \Lambda_i^E(t) = \lambda_i^{\text{int}}(t).
+\end{equation}
+
+En un esquema discreto con paso de tiempo $\Delta t = 1$, las probabilidades de infeccion en una iteracion son
+\begin{equation}
+  p_i^M(t) = 1 - \exp\big(-\Lambda_i^M(t)\big), \qquad
+  p_i^E(t) = 1 - \exp\big(-\Lambda_i^E(t)\big).
+\end{equation}
+
+Sea $\delta > 0$ la tasa de recuperacion. La probabilidad de que un individuo infectado se recupere en un paso es
+\begin{equation}
+  p^{\text{rec}} = 1 - \exp(-\delta).
+\end{equation}
+
+La dinamica estocastica SIR en cada nodo se modela entonces como
+\begin{align}
+  \Delta I_i^M(t) &\sim \text{Binomial}\big(S_i^M(t),\, p_i^M(t)\big), \\
+  \Delta I_i^E(t) &\sim \text{Binomial}\big(S_i^E(t),\, p_i^E(t)\big), \\
+  \Delta R_i^M(t) &\sim \text{Binomial}\big(I_i^M(t),\, p^{\text{rec}}\big), \\
+  \Delta R_i^E(t) &\sim \text{Binomial}\big(I_i^E(t),\, p^{\text{rec}}\big),
+\end{align}
+y las actualizaciones de los compartimentos son
+\begin{align}
+  S_i^M(t+1) &= S_i^M(t) - \Delta I_i^M(t), \\
+  I_i^M(t+1) &= I_i^M(t) + \Delta I_i^M(t) - \Delta R_i^M(t), \\
+  R_i^M(t+1) &= R_i^M(t) + \Delta R_i^M(t), \\
+  S_i^E(t+1) &= S_i^E(t) - \Delta I_i^E(t), \\
+  I_i^E(t+1) &= I_i^E(t) + \Delta I_i^E(t) - \Delta R_i^E(t), \\
+  R_i^E(t+1) &= R_i^E(t) + \Delta R_i^E(t).
+\end{align}
+
+A nivel agregado, las curvas globales del modelo se obtienen sumando sobre todos los nodos:
+\begin{align}
+  S(t) &= \sum_{i=1}^N \big( S_i^M(t) + S_i^E(t) \big), \\
+  I(t) &= \sum_{i=1}^N \big( I_i^M(t) + I_i^E(t) \big), \\
+  R(t) &= \sum_{i=1}^N \big( R_i^M(t) + R_i^E(t) \big).
+\end{align}
+
+Estas expresiones resumen la estructura matematica del modelo de metapoblaciones DC--SBM con dinamica SIR estratificada que se implementa en el resto del trabajo.
+
+
+En primer lugar, se formalizara el modelo propuesto a nivel matematico. 
+Esto incluye definir la \emph{topologia macro} de la ciudad como una red de manzanas u hogares generada mediante un modelo DC-SBM, con distintos tipos de nodos (por ejemplo, refugio, puente, centro) y una matriz de mezcla $B$ que controla las tasas de conexion entre ellos. 
+Cada nodo tendra un parametro de sociabilidad $\theta_i$ que fija su grado esperado, permitiendo obtener distribuciones de grado heterogeneas compatibles con la presencia de hubs urbanos.
+
+\begin{figure}[ht]
+    \centering
+    \includegraphics[width=\textwidth]{Img/red.png} % <-- cambia el nombre/ruta si es necesario
+    \caption{Esquema ilustrativo del mecanismo de generacion y proyeccion de la red. 
+    Izquierda: poblacion inicial con tres tipos de nodos (hubs de trabajo en rojo, hogares residenciales en azul y nodos de ocio en verde). 
+    Derecha: red final solo de hogares, donde las aristas de vecindario aparecen en gris y las conexiones laborales proyectadas (producto del colapso de los hubs) en rojo.}
+    \label{fig:proyeccion_hubs}
+\end{figure}
+
+La Figura~\ref{fig:proyeccion_hubs} ilustra este mecanismo de generacion y proyeccion: primero se construye una red que incluye nodos de hogares y nodos de trabajo/ocio altamente conectados (hubs), y posteriormente se colapsan estos hubs para obtener una red unimodal de hogares con enlaces densos que codifican la coincidencia en lugares de actividad.
+
+Sobre esta estructura se describira el mecanismo de \emph{red bipartita y proyeccion de centros de actividad}: se introducen nodos intermedios que representan lugares (oficinas, escuelas, espacios de ocio) y se construye una red bipartita manzana–centro; posteriormente, estos centros se eliminan colapsandolos en cliques entre las manzanas que los comparten, obteniendo una red unimodal de manzanas con conectividad densa en torno a los hubs.
+
+A continuacion se definiran los \emph{pesos de arista} $W_{ij}$ que codifican la fisica de la interaccion segun arquetipos de lugar (oficina, transporte, escuela, comercio, vecindario), combinando frecuencia, duracion y aglutinamiento de los contactos. 
+Tambien se especificara la \emph{demografia interna de los nodos}, asignando tamanos de poblacion a cada manzana y particionandolos en fraccion movil y fraccion estatica.
+
+Sobre esta red ponderada se introducira la dinamica epidemiologica mediante un modelo SIR estratificado, con compartimentos $S_M, I_M, R_M$ para la poblacion movil y $S_E, I_E, R_E$ para la estatica. 
+Se presentaran las ecuaciones (en forma discreta o continua, segun el caso) que combinan la fuerza de infeccion interna (dentro de cada nodo) y externa (mediada por la red y los pesos $W_{ij}$), asi como la forma en que la friccion dinamica modula temporalmente estos pesos.
+
+Finalmente, se definira explicitamente el \emph{espacio de parametros del modelo}, clasificando los parametros estructurales (matriz $B$, distribuciones de $\theta_i$, densidad de hubs), los parametros dinamicos (tasas de infeccion y recuperacion del SIR) y los parametros de reaccion social (factores de friccion, movilidad minima, intensidad relativa de los distintos tipos de enlace).
+
+\subsection{Implementacion computacional}
+
+El segundo bloque metodologico se centrara en la implementacion computacional del modelo en Python. 
+Se describira la estructura de la clase \texttt{DCSBMNetworkModel}, que encapsula la generacion de la red DC-SBM, la asignacion de pesos y la simulacion de la dinamica SIR sobre la red. 
+Se explicaran sus metodos principales (inicializacion de la topologia, construccion de la red bipartita, colapso de hubs, simulacion temporal) y la forma en que se gestionan las semillas aleatorias para garantizar reproducibilidad.
+
+La representacion de la red se realizara combinando \texttt{networkx} (para la manipulacion de grafos) con matrices dispersas de \texttt{scipy.sparse} (para almacenar $W_{ij}$ y operar de forma eficiente sobre miles de nodos). 
+Se detallara como se vectoriza la dinamica SIR usando operaciones de algebra lineal sobre estas matrices, evitando bucles explicitos sobre nodos cuando sea posible.
+
+Asimismo, se describira el \emph{motor de simulacion}: el bucle temporal que actualiza los estados SIR estratificados, el esquema de muestreo estocastico (si se utiliza una version discreta y probabilistica del modelo) y el formato de salida de los resultados. 
+Se definira una estructura de datos (por ejemplo, una clase o diccionario) que almacene series temporales agregadas y por nodo, preparada para ser analizada y, mas adelante, utilizada como conjunto de datos para el surrogate.
+
+Finalmente, se presentara el \emph{pipeline de generacion de escenarios}, es decir, el conjunto de funciones o scripts que permiten lanzar simulaciones masivas variando parametros (friccion, densidad de hubs, pesos de contacto, tasas epidemiologicas) y semillas iniciales. 
+Este pipeline sera la base del diseno experimental descrito en el siguiente apartado.
+
+\subsection{Diseno experimental}
+
+El tercer bloque metodologico definira como se utilizara el modelo implementado para generar resultados cuantitativos. 
+En primer lugar, se describira la \emph{definicion de escenarios y barridos de parametros}: se seleccionaran rangos de valores para los parametros clave (por ejemplo, intensidad de la friccion, peso relativo de los enlaces de trabajo y transporte, tasa de infeccion, densidad de hubs) y se definiran conjuntos de escenarios que combinen estas dimensiones de forma sistematica.
+
+En segundo lugar, se introduciran las \emph{metricas de salida} que se calcularan a partir de las simulaciones, tales como el pico epidemico (maximo de infectados en el tiempo), el tiempo al pico, el area bajo la curva de infectados, indicadores de propagacion espacial (por ejemplo, numero de nodos alcanzados, patrones de dispersion desde los centros a la periferia) y medidas de variabilidad entre replicas.
+
+En tercer lugar, se especificara el \emph{procedimiento de simulacion y replicacion}: numero de replicas por escenario, manejo de semillas aleatorias, criterios para decidir si un conjunto de replicas es suficiente (por ejemplo, estabilizacion de medias y varianzas) y metodos basicos de analisis estadistico (calculo de medias, intervalos de confianza, comparaciones entre escenarios). 
+Este diseno experimental proporcionara el conjunto de datos sobre el que se evaluara el comportamiento del modelo y se entrenara el modelo sustituto.
+
+\subsection{Modelo sustituto (surrogate) basado en autoencoder}
+
+El ultimo bloque metodologico estara dedicado al desarrollo de un modelo sustituto basado en aprendizaje de maquina, con el objetivo de aproximar la dinamica del simulador completo a un coste computacional mucho menor. 
+Para ello, se construira primero un \emph{conjunto de datos} a partir de las simulaciones: cada escenario se representara mediante un vector de entrada que codifique sus parametros (estructura de la red, pesos, tasas SIR, friccion) y un vector de salida que resuma la respuesta epidemica (por ejemplo, curvas agregadas o estadisticos resumen).
+
+Sobre este conjunto de datos se definira una arquitectura de \emph{autoencoder} u otro modelo adecuado (por ejemplo, una red feedforward profunda), que aprenda una representacion latente compacta de la dinamica y permita reconstruir las salidas a partir de los parametros de entrada. 
+Se describiran las decisiones de diseno basicas (numero de capas, dimension latente, funciones de activacion) y el procedimiento de entrenamiento (division entrenamiento/validacion, funcion de perdida, optimizador, criterios de parada).
+
+Finalmente, se planteara la \emph{evaluacion del surrogate} comparando sus predicciones con las del simulador original en escenarios no vistos durante el entrenamiento, utilizando metricas de error adecuadas (por ejemplo, error cuadratico medio sobre curvas, diferencias en pico y tiempo al pico). 
+Se discutira tambien el potencial del surrogate para acelerar analisis de escenarios y estudios de sensibilidad en etapas posteriores de la tesis.
+
+
+A partir del marco teorico y de la evolucion conceptual del modelo, los siguientes pasos de la tesis se organizan en cuatro bloques metodologicos: 
+(i) la descripcion matematica detallada del modelo de red y de la dinamica SIR; 
+(ii) su implementacion computacional en Python; 
+(iii) el diseno experimental para explorar escenarios y sensibilidad a parametros; 
+y (iv) el desarrollo de un modelo sustituto (surrogate) basado en aprendizaje de maquina. 
+Esta seccion resume el contenido y el proposito de cada uno de estos bloques, que se desarrollaran en los capitulos posteriores.
+
+\subsection{Descripcion matematica del modelo}
+
+En primer lugar, se formalizara el modelo propuesto a nivel matematico. 
+Esto incluye definir la \emph{topologia macro} de la ciudad como una red de manzanas u hogares generada mediante un modelo DC-SBM, con distintos tipos de nodos (por ejemplo, refugio, puente, centro) y una matriz de mezcla $B$ que controla las tasas de conexion entre ellos. 
+Cada nodo tendra un parametro de sociabilidad $\theta_i$ que fija su grado esperado, permitiendo obtener distribuciones de grado heterogeneas compatibles con la presencia de hubs urbanos.
+
+Sobre esta estructura se describira el mecanismo de \emph{red bipartita y proyeccion de centros de actividad}: se introducen nodos intermedios que representan lugares (oficinas, escuelas, espacios de ocio) y se construye una red bipartita manzana–centro; posteriormente, estos centros se eliminan colapsandolos en cliques entre las manzanas que los comparten, obteniendo una red unimodal de manzanas con conectividad densa en torno a los hubs.
+
+A continuacion se definiran los \emph{pesos de arista} $W_{ij}$ que codifican la fisica de la interaccion segun arquetipos de lugar (oficina, transporte, escuela, comercio, vecindario), combinando frecuencia, duracion y aglutinamiento de los contactos. 
+Tambien se especificara la \emph{demografia interna de los nodos}, asignando tamanos de poblacion a cada manzana y particionandolos en fraccion movil y fraccion estatica.
+
+Sobre esta red ponderada se introducira la dinamica epidemiologica mediante un modelo SIR estratificado, con compartimentos $S_M, I_M, R_M$ para la poblacion movil y $S_E, I_E, R_E$ para la estatica. 
+Se presentaran las ecuaciones (en forma discreta o continua, segun el caso) que combinan la fuerza de infeccion interna (dentro de cada nodo) y externa (mediada por la red y los pesos $W_{ij}$), asi como la forma en que la friccion dinamica modula temporalmente estos pesos.
+
+Finalmente, se definira explicitamente el \emph{espacio de parametros del modelo}, clasificando los parametros estructurales (matriz $B$, distribuciones de $\theta_i$, densidad de hubs), los parametros dinamicos (tasas de infeccion y recuperacion del SIR) y los parametros de reaccion social (factores de friccion, movilidad minima, intensidad relativa de los distintos tipos de enlace).
+
+\subsection{Implementacion computacional}
+
+El segundo bloque metodologico se centrara en la implementacion computacional del modelo en Python. 
+Se describira la estructura de la clase \texttt{DCSBMNetworkModel}, que encapsula la generacion de la red DC-SBM, la asignacion de pesos y la simulacion de la dinamica SIR sobre la red. 
+Se explicaran sus metodos principales (inicializacion de la topologia,
+
+\section{Resultados, analisis y conclusiones parciales}
+
+En esta seccion se describen, de forma integrada, los resultados obtenidos hasta el momento, su interpretacion en el contexto del modelado urbano y las conclusiones parciales del proyecto, asi como las lineas de trabajo pendiente para completar el estudio.
+
+\subsection{Estado actual del proyecto}
+
+Hasta la fecha, el avance del proyecto se concentra en tres frentes principales:
+
+\begin{itemize}
+    \item \textbf{Reformulacion teorica del modelo:} Se completo el analisis critico del enfoque hibrido original basado en IBM+SEIR y se definio una nueva arquitectura centrada en metapoblaciones de hogares/manzanas, friccion espacial dinamica y generacion de red mediante un modelo DC-SBM.
+    \item \textbf{Diseno e implementacion del generador de red:} Se ha implementado la logica de generacion matricial expandida y colapso de hubs en el modulo \texttt{dcsbm\_generator}. El modelo produce una red inicial con tres tipos de nodos (residencial, hubs de trabajo y ocio) y una red final solo de hogares donde las aristas de vecindario y trabajo proyectado quedan diferenciadas. La validez cualitativa de este mecanismo se ha verificado mediante visualizaciones como la Figura~\ref{fig:proyeccion_hubs}, donde se observa la aparicion de comunidades densas asociadas a los centros de trabajo.
+    \item \textbf{Especificacion formal de la dinamica SIR y del espacio de parametros:} Se ha definido el esquema SIR estratificado (poblacion movil vs. estatica), asi como las clases de parametros estructurales (matriz de mezcla, sociabilidades, densidad de hubs), dinamicos (tasas de infeccion y recuperacion) y de friccion social (factores de reduccion de pesos). Esta especificacion sirve como base inmediata para la implementacion del motor de simulacion.
+\end{itemize}
+
+En esta etapa, el proyecto se encuentra, por tanto, en un punto intermedio: el generador de redes y la arquitectura conceptual estan consolidados y listos para integrarse con el modulo de dinamica epidemica, pero aun no se ha desarrollado el conjunto completo de experimentos numericos ni el modelo sustituto.
+
+\subsection{Resultados preliminares sobre la estructura de red}
+
+Los primeros resultados se centran en la estructura de la red generada. Las simulaciones topologicas muestran que:
+
+\begin{itemize}
+    \item Los nodos de tipo hub (trabajo) actuan efectivamente como concentradores que conectan hogares dispersos, y su colapso en aristas proyectadas produce cliques densos entre manzanas que comparten un mismo centro.
+    \item Las aristas de vecindario mantienen una conectividad mas local y dispersa, lo que permite distinguir de manera clara la capa de contactos cotidianos en el barrio de la capa de contactos laborales de largo alcance.
+    \item Este diseno preserva propiedades de mundo pequeno (distancias cortas entre nodos) sin perder la segregacion funcional entre zonas residenciales y hubs, lo que resulta coherente con la intuicion urbana que motiva el modelo.
+\end{itemize}
+
+Aunque todavia no se han acoplado de forma sistematica las ecuaciones SIR al grafo para producir curvas epidemicas, estos resultados topologicos constituyen una validacion importante: la red generada reproduce el patron cualitativo deseado de “barrio + centros de trabajo” sobre el que se apoyaran las simulaciones de contagio.
+
+\subsection{Lineas de analisis previstas}
+
+Una vez implementado el motor SIR sobre la red ponderada, el analisis cuantitativo se estructurara en tres ejes:
+
+\begin{enumerate}
+    \item \textbf{Comportamiento del modelo base:} estudio de la dinamica epidemica en escenarios de referencia, verificando propiedades esperadas como la forma de las curvas de infectados, el efecto de la friccion espacial y la aparicion de gradientes centro–periferia.
+    \item \textbf{Impacto de la estructura de red y de la friccion:} comparacion de escenarios con distinta densidad de hubs, diferentes matrices de mezcla y distintos perfiles de friccion dinamica, para cuantificar como la topologia y las politicas de movilidad alteran el pico epidemico, el tiempo al pico y la extension espacial del brote.
+    \item \textbf{Rendimiento del modelo sustituto:} una vez entrenado el surrogate (por ejemplo, un autoencoder), se compararan tiempos de computo y errores de prediccion frente al simulador completo, evaluando en que rangos de parametros el surrogate es fiable para analisis de escenarios rapidos.
+\end{enumerate}
+
+Estos analisis constituiran el nucleo de los capitulos de resultados y permitiran responder a la pregunta central de la tesis: hasta que punto una red sintetica generada por DC-SBM, con friccion dinamica y estratificacion movil/estatica, puede reducir la incertidumbre frente a modelos mas simples o excesivamente detallados.
+
+\subsection{Conclusiones parciales y trabajo futuro}
+
+Aunque el proyecto aun no ha alcanzado la fase de resultados epidemicos completos, es posible extraer algunas conclusiones parciales:
+
+\begin{itemize}
+    \item La reformulacion hacia un modelo de metapoblaciones basado en DC-SBM resuelve varias limitaciones del enfoque hibrido original, en particular la transicion binaria de topologia y la falta de control sobre la segregacion funcional de la ciudad.
+    \item El mecanismo de “generar y colapsar” hubs permite incorporar de forma parsimoniosa la estructura de lugares de trabajo y ocio, evitando el doble conteo de individuos y manteniendo un unico tipo de nodo (hogares/manzanas) sobre el que aplicar la dinamica SIR.
+    \item La separacion conceptual entre estructura de red, fisica de contacto (pesos) y friccion dinamica ofrece un marco flexible para representar distintas politicas de control sin necesidad de reconstruir la red en cada escenario.
+\end{itemize}
+
+El trabajo futuro inmediato se centrara en: (i) implementar y validar el motor SIR estratificado sobre la red generada, (ii) disenar y ejecutar el plan de experimentos descrito en la seccion de metodologia, y (iii) construir y evaluar el modelo sustituto basado en aprendizaje de maquina. Sobre esta base sera posible completar el capitulo de resultados con figuras y tablas cuantitativas, profundizar en la discusion metodologica y cerrar la tesis con conclusiones finales apoyadas en evidencia numerica.
+
+

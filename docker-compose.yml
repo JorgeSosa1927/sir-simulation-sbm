@@ -1,0 +1,54 @@
+services:
+  # Servicio para ejecutar la simulación SIR
+  simulation:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: sir_simulation
+    volumes:
+      # Monta la carpeta actual para guardar los resultados
+      - ./output:/app/output
+    environment:
+      - MPLBACKEND=Agg # Backend sin GUI para matplotlib
+    command: python test_simulation.py
+
+  # Servicio para ejecutar la visualización
+  visualization:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: sir_visualization
+    volumes:
+      - ./output:/app/output
+    environment:
+      - MPLBACKEND=Agg
+    command: python visualize_simple_sbm.py
+
+  # Servicio que ejecuta ambos secuencialmente
+  run_all:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: sir_complete_run
+    volumes:
+      - ./output:/app/output
+    environment:
+      - MPLBACKEND=Agg
+    command: >
+      sh -c "python test_simulation.py && 
+             python visualize_simple_sbm.py &&
+             echo 'Simulación completa. Revisa la carpeta output/'"
+
+  # Servicio para ejecutar la tarea RL Task 3
+  rl_task:
+    build:
+      context: .
+      dockerfile: Dockerfile.rl
+    container_name: rl_task_container
+    volumes:
+      - .:/app
+    environment:
+      - MPLBACKEND=Agg
+      - MUJOCO_GL=osmesa
+      # Set HOME to /app so permissions work better if needed, or standard /root
+    command: python rl25_task3.py
