@@ -42,8 +42,16 @@ Results are saved in the `output/` folder. Below are the latest simulation stati
 | **Accumulated Infected** | 35379.82 (+/- 6605.26) | 76344.08 (+/- 1284.00) |
 | **Last Iteration Infected** | 244.47 (+/- 193.59) | 0.00 (+/- 0.00) |
 
+### 🔍 Distance Modulation (Fermi-Dirac)
+The simulation uses a **Fermi-Dirac distribution** to determine connection probabilities based on spatial distance ($d$):
+$$P(d) = \frac{1}{\exp(\beta \cdot (d - \mu)) + 1}$$
+
+We compare two threshold scenarios ($\mu$):
+- **Scenario A: Small Mu ($\mu=5$):** A restrictive spatial threshold. Connections are only likely at very short distances, representing a strict mobility scenario or local confinement.
+- **Scenario B: Large Mu ($\mu=15$):** A free mobility threshold. Distance has much less impact, allowing connections to form across larger areas of the network.
+
 ![Infection Comparison](output/infectados_mu_small_vs_mu_infty.png)
-*Figure 1: Comparison of outbreak dynamics under restrictive (Small Mu) vs. free (Large Mu) distance thresholds.*
+*Figure 1: Comparison of outbreak trajectories. Individual simulations (faint lines) show stochasticity, while bold lines represent the mean behavior.*
 
 #### Other generated files:
 - **test_simulation_plot.png**: SIR dynamics plot
