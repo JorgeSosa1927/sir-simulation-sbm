@@ -104,8 +104,8 @@ rm -rf output/
 
 This model implements:
 
-1. **SBM Network Generation**: Social blocks, non-social blocks, and hubs
-2. **Hub Projection**: Hubs are projected as connections between "manzanas" (blocks/neighborhoods)
+1. **SBM Network Generation**: Nodes (blocks/neighborhoods) are distributed uniformly in a **2D square of 38x38 units**, mimicking the geographic scale and density typical of cities like **St. Petersburg**. 
+2. **Hub Projection**: Hubs are projected as connections between "manzanas" (blocks/neighborhoods) through common visited locations.
 3. **SIR Simulation**:
    - Stratified population (mobile and static)
    - Transmission within households and between nodes
