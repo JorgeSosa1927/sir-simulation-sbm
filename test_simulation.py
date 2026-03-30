@@ -21,14 +21,15 @@ ETIQUETAS_BLOQUE = {
 
 HUB_SUBTYPE_PROBS = {
     "office": 0.4,
-    "transport": 0.3,
-    "school": 0.1,
-    "shop": 0.2,
+    "transport": 0.1,
+    "school": 0.4,
+    "shop": 0.1,
 }
 
 PERSONAS_REGLAS = {
-    0: (1, 150, 0.7),
-    2: (1, 150, 0.4),
+    0: (200, 280, 0.7),
+    2: (200, 280, 0.4),
+    
 }
 
 INTERACTION_WEIGHTS = {
@@ -40,7 +41,7 @@ INTERACTION_WEIGHTS = {
     # Projected edges (hubs) -> MUCH lower
     "office": 0.03,
     "transport": 0.02,
-    "school": 0.05,
+    "school": 0.99,
     "shop": 0.01,
 }
 
@@ -68,31 +69,30 @@ def _build_model_config_data(tamanos_bloques, matriz_mezcla, semilla):
 
 
 
+tamanos_bloques = [435, 75, 490]
+n_net = sum(tamanos_bloques)
+
+# Base intensities (approx. average degree constants)
+# These values / n_net = connection probability
+base_matrix = [
+    [80.0, 4.0, 5.0],
+    [4.0, 0.0, 1.0],
+    [5.0, 1.0, 1.0],
+]
+
 MODEL_CONFIG_TEMPLATE = _build_model_config_data(
-    # (2) Fewer hubs: from 15 -> 7 (can try 6–8)
-    tamanos_bloques=[40, 7, 45],
-
-    # (1) Adjusted mixing matrix:
-    #   - Keep social neighborhood relatively high
-    #   - Keep non-social neighborhood very low
-    #   - Reduce strong connections with hubs (to avoid "clique explosion" when projecting)
-    matriz_mezcla=[
-        #   S       H       N
-        [0.10,   0.02,  0.010],  # S -> (S,H,N)
-        [0.02,  0.000,  0.004],  # H -> (S,H,N)
-        [0.010,  0.004,  0.001],  # N -> (S,H,N)
-    ],
-
+    tamanos_bloques=tamanos_bloques,
+    matriz_mezcla=[[(v / n_net) for v in row] for row in base_matrix],
     semilla=123,
 )
 
-
+factor = 1.09
 SIMULATION_PARAMS = {
-    "beta_network": 0.10,
-    "beta_household": 0.05,
-    "delta": 0.10,
-    "init_inf_frac": 0.01,
-    "min_initial_infected": 5,
+    "beta_network": 0.41*factor,
+    "beta_household": 2.1*factor,
+    "delta": 0.88*factor,
+    "init_inf_frac": 0.0003,
+    "min_initial_infected": 20,
     "seed_mobile_bias": 0.7,
     "tmax": 100,
     "seed": 123,
@@ -157,28 +157,34 @@ def _plot_comparative_experiment(t,
     
     plt.figure(figsize=(10, 6))
     
-    # 1) MU SMALL (Restrictive)
-    mean_I_small = np.mean(results_small["I"], axis=0)
-    std_I_small = np.std(results_small["I"], axis=0)
-    
-    plt.plot(t, mean_I_small, color="blue", label=f"Small Mu (Restrictive)", linewidth=2.5)
-    plt.fill_between(t, mean_I_small - std_I_small, mean_I_small + std_I_small, color="blue", alpha=0.2)
+    # 1) MU SMALL (Restrictive) - Green
+    I_small = results_small["I"]
+    mean_I_small = np.mean(I_small, axis=0)
+    for i in range(len(I_small)):
+        plt.plot(t, I_small[i], color="green", alpha=0.1, linewidth=0.7)
+    plt.plot(t, mean_I_small, color="green", label="Small Mu (Restrictive)", linewidth=3)
 
-    # 2) MU LARGE (Free)
-    mean_I_large = np.mean(results_large["I"], axis=0)
-    std_I_large = np.std(results_large["I"], axis=0)
-    
-    plt.plot(t, mean_I_large, color="green", label=f"Large Mu (Free)", linewidth=2.5, linestyle="--")
-    plt.fill_between(t, mean_I_large - std_I_large, mean_I_large + std_I_large, color="green", alpha=0.2)
+    # 2) MU LARGE (Free) - Blue
+    I_large = results_large["I"]
+    mean_I_large = np.mean(I_large, axis=0)
+    for i in range(len(I_large)):
+        plt.plot(t, I_large[i], color="blue", alpha=0.1, linewidth=0.7)
+    plt.plot(t, mean_I_large, color="blue", label="Large Mu (Free)", linewidth=3)
 
-    plt.title("Comparison: Effect of Distance on Propagation (Uncertainty Bands)")
-    plt.xlabel("Time (steps)")
-    plt.ylabel("Infected (Mean +/- Std Dev)")
-    plt.legend()
-    plt.grid(True, alpha=0.3)
+    plt.title("Infection Dynamics: Distance Restrictiveness Comparison", fontsize=14)
+    plt.xlabel("Time (steps)", fontsize=12)
+    plt.ylabel("Infected Individuals", fontsize=12)
+    plt.xlim(0, 76)
+    plt.legend(frameon=True, facecolor='white', framealpha=0.9)
+    plt.grid(True, linestyle='--', alpha=0.3)
+    
+    # Clean aesthetics
+    ax = plt.gca()
+    ax.spines['top'].set_visible(False)
+    ax.spines['right'].set_visible(False)
     
     print(f"Saving comparative plot to: {output_path}")
-    plt.savefig(output_path, dpi=300)
+    plt.savefig(output_path, dpi=300, bbox_inches='tight')
     plt.close()
 
 
@@ -252,11 +258,11 @@ def run_experiment_scenario(scenario_name, mu_value, beta_value, num_sims=50):
         "total_pop": total_pop
     }
 
-    # 4. Monte Carlo Simulation
     base_packet = dict(SIMULATION_PARAMS)
     base_packet["G"] = H_multi
     
     all_I = []
+    all_R = []
     
     base_seed = SIMULATION_PARAMS["seed"]
     
@@ -268,12 +274,14 @@ def run_experiment_scenario(scenario_name, mu_value, beta_value, num_sims=50):
         try:
             out = generador.simulate(packet)
             all_I.append(out.I)
+            all_R.append(out.R)
         except Exception as e:
             print(f"Error in simulation {i}: {e}")
             continue
 
     return {
         "I": np.array(all_I),
+        "R": np.array(all_R),
         "params": {"mu": mu_value, "beta": beta_value}
     }, graph_stats, pop_stats
 
@@ -283,16 +291,19 @@ def test_simulation_plot():
     os.makedirs("output", exist_ok=True)
 
     # Experiment parameters
-    FERMI_BETA = 15.0  # Abruptness
+    FERMI_BETA = 0.2 # Abruptness
     
     # Case A: Small Mu (distance matters a lot)
-    # Assuming spring_layout in [-1, 1], typical distances ~0.1 - 1.5
-    MU_SMALL = 0.025 
+    # St. Petersburg short distance threshold (~5km / 38km city)
+    MU_SMALL = 5 
     
     # Case B: Large Mu (distance irrelevant, f(d) ~ 1)
-    MU_LARGE = 100.0
+    MU_LARGE = 15
 
     NUM_SIMS = 100  # Adjust as needed for performance
+
+
+
 
     # Run scenarios
     results_small, graph_stats, pop_stats = run_experiment_scenario("Small Mu", MU_SMALL, FERMI_BETA, NUM_SIMS)
@@ -315,22 +326,28 @@ def test_simulation_plot():
     print("-" * 30)
 
     # 2. Infection Results
-    def print_peak_stats(label, results):
+    def print_simulation_stats(label, results):
         I_matrix = results["I"] # (num_sims, tmax)
+        R_matrix = results["R"] # (num_sims, tmax)
+        
         peaks = np.max(I_matrix, axis=1) # Peak of each run
         
-        mean_peak = np.mean(peaks)
-        std_peak = np.std(peaks)
-        min_peak = np.min(peaks)
-        max_peak = np.max(peaks)
+        # Infected at the last iteration
+        last_I = I_matrix[:, -1]
+        # Recovered at the last iteration
+        last_R = R_matrix[:, -1]
+        
+        # Accumulated infected (I + R at the end)
+        acc_infected = last_I + last_R
         
         print(f"Scenario {label}:")
-        print(f"  - Peak Infected (Mean): {mean_peak:.2f}")
-        print(f"  - Uncertainty (Std Dev): +/- {std_peak:.2f}")
-        print(f"  - Range [Min, Max] peaks: [{min_peak:.2f}, {max_peak:.2f}]")
+        print(f"  - Peak Infected (Mean): {np.mean(peaks):.2f} (+/- {np.std(peaks):.2f})")
+        print(f"  - Last Iteration Infected (Mean): {np.mean(last_I):.2f} (+/- {np.std(last_I):.2f})")
+        print(f"  - Total Accumulated Infected (Mean): {np.mean(acc_infected):.2f} (+/- {np.std(acc_infected):.2f})")
+        print(f"  - Range [Min, Max] peaks: [{np.min(peaks):.2f}, {np.max(peaks):.2f}]")
 
-    print_peak_stats("A (Small Mu - Restrictive)", results_small)
-    print_peak_stats("B (Large Mu - Free)", results_large)
+    print_simulation_stats("A (Small Mu - Restrictive)", results_small)
+    print_simulation_stats("B (Large Mu - Free)", results_large)
     print("="*50 + "\n")
 
     # Verify we have data

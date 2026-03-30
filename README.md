@@ -34,10 +34,20 @@ docker-compose up visualization
 
 ## 📊 Results
 
-Results will be saved in the `output/` folder:
+Results are saved in the `output/` folder. Below are the latest simulation statistics (Mean +/- Std Dev):
 
-- **test_simulation_plot.png**: SIR dynamics plot (Susceptible, Infected, Recovered)
-- **simple_sbm_comparison.png**: Visual comparison between the original network with hubs and the projected network
+| Metric | Scenario A: Small Mu (Restrictive) | Scenario B: Large Mu (Free) |
+| :--- | :--- | :--- |
+| **Peak Infected** | 1240.67 (+/- 281.88) | 7523.32 (+/- 330.77) |
+| **Accumulated Infected** | 35379.82 (+/- 6605.26) | 76344.08 (+/- 1284.00) |
+| **Last Iteration Infected** | 244.47 (+/- 193.59) | 0.00 (+/- 0.00) |
+
+![Infection Comparison](output/infectados_mu_small_vs_mu_infty.png)
+*Figure 1: Comparison of outbreak dynamics under restrictive (Small Mu) vs. free (Large Mu) distance thresholds.*
+
+#### Other generated files:
+- **test_simulation_plot.png**: SIR dynamics plot
+- **simple_sbm_comparison.png**: Visual comparison between original and projected network
 
 ## 🛠️ Project Structure
 

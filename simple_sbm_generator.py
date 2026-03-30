@@ -29,8 +29,8 @@ class ModeloConfig:
         edge_origin_attr="edge_origin",
         pair_type_attr="manzana_pair_type",
         weight_attr="weight",
-        fermi_beta=10.0,
-        fermi_mu=0.5
+        fermi_beta=0.5,
+        fermi_mu=5
     ):
         self.tamanos_bloques = tamanos_bloques
         self.matriz_mezcla = matriz_mezcla
@@ -114,36 +114,115 @@ class GeneradorSBM:
                 data[self.cfg.hub_subtype_attr] = self.rng.choice(subtipos, p=probs)
 
     def generar_original(self):
-        G = nx.stochastic_block_model(
-            sizes=self.cfg.tamanos_bloques,
-            p=self.matriz_mezcla,
-            seed=self.cfg.semilla,
-            directed=False,
-            selfloops=False
-        )
+        G = nx.Graph()
 
-        # Readable label per block
+        # 1. Creación de nodos y asignación de block
+        sizes = self.cfg.tamanos_bloques
+        node_id = 0
+        for block_idx, size in enumerate(sizes):
+            for _ in range(size):
+                G.add_node(node_id, block=block_idx)
+                node_id += 1
+
+        # 2. Asignación de tipos de nodo
         for n, data in G.nodes(data=True):
             b = data.get("block")
             data[self.cfg.node_type_attr] = self.cfg.etiquetas_bloque.get(b, "unknown")
 
-        # Hub attributes
+        # 3. Posiciones aleatorias uniformes
+        L = 38.0
+        for n in G.nodes():
+            x = self.rng.uniform(0, L)
+            y = self.rng.uniform(0, L)
+            G.nodes[n]['pos'] = np.array([x, y], dtype=float)
+
+        # 4. Asignación de subtipos de hub (necesita que existan los nodos y los tipos)
         self._asignar_hub_subtype(G)
 
-        # Person attributes per rules
+        # Determinar etiqueta de hub dinámicamente
+        hub_ids = [k for k, v in self.cfg.etiquetas_bloque.items() if v == "hub"]
+        hub_label = self.cfg.etiquetas_bloque[hub_ids[0]] if hub_ids else "hub"
+
+        def fermi_dirac(dist):
+            return 1.0 / (np.exp(self.cfg.fermi_beta * (dist - self.cfg.fermi_mu)) + 1.0)
+            
+        def obtener_mecanismos_conexion(data_u, data_v):
+            """
+            Abstrae el tipo de nodo hacia la verdadera capa lógica: los mecanismos de conexión.
+            """
+            t_u = data_u.get(self.cfg.node_type_attr)
+            t_v = data_v.get(self.cfg.node_type_attr)
+            
+            mecanismos = []
+            if t_u != hub_label and t_v != hub_label:
+                mecanismos.append("direct")
+            elif t_u == hub_label and t_v != hub_label:
+                mecanismos.append(data_u.get(self.cfg.hub_subtype_attr, "unknown"))
+            elif t_v == hub_label and t_u != hub_label:
+                mecanismos.append(data_v.get(self.cfg.hub_subtype_attr, "unknown"))
+            # Hub a Hub connections yield no structural logical mechanism in this toy model
+            return mecanismos
+
+        # 5. Generación probabilística de aristas usando MECANISMOS
+        from itertools import combinations
+        for u, v in combinations(G.nodes(), 2):
+            data_u = G.nodes[u]
+            data_v = G.nodes[v]
+            
+            block_u = data_u["block"]
+            block_v = data_v["block"]
+            p_base = self.matriz_mezcla[block_u][block_v]
+            
+            if p_base <= 0:
+                continue
+
+            # 1. Crear lista de mecanismos posibles entre i y j
+            mecanismos = obtener_mecanismos_conexion(data_u, data_v)
+            if not mecanismos:
+                continue
+
+            # 2. Calcular distancia d
+            pos_u = data_u['pos']
+            pos_v = data_v['pos']
+            dist = np.linalg.norm(pos_u - pos_v)
+            f_d = fermi_dirac(dist)
+
+            # 3. Combinar todas las probabilidades de mecanismos disponibles
+            p_inv_total = 1.0
+            
+            for mec in mecanismos:
+                # La condición espacial pertenece al MECANISMO, no al tipo de nodo.
+                if mec == "direct":
+                    p_mec = p_base * f_d
+                elif mec == "school":
+                    p_mec = p_base * f_d
+                elif mec == "office":
+                    p_mec = p_base
+                elif mec == "transport":
+                    p_mec = p_base
+                elif mec == "shop":
+                    p_mec = p_base
+                else:
+                    p_mec = p_base # fallback
+                
+                p_inv_total *= (1.0 - p_mec)
+                
+            p_final = 1.0 - p_inv_total
+
+            # 4. Muestrear la existencia de la conexión con esa probabilidad final
+            if self.rng.random() < p_final:
+                # Guardamos el primer mecanismo primario para fines analíticos
+                G.add_edge(u, v, mechanism=mecanismos[0] if mecanismos else "combined")
+
+        # 6. Person attributes per rules
         for block_id, regla in self.cfg.personas_reglas.items():
             total_min, total_max, p_moviles = regla
             self._asignar_personas_a_bloque(G, block_id, total_min, total_max, p_moviles)
 
-        # Filter: Keep only the Largest Connected Component (LCC)
+        # 7. Filter: Keep only the Largest Connected Component (LCC)
         if len(G) > 0:
             largest_cc = max(nx.connected_components(G), key=len)
             G = G.subgraph(largest_cc).copy()
-
-        # Generate and save persistent coordinates for visual consistency
-        pos = nx.spring_layout(G, seed=self.cfg.semilla) 
-        for n, coords in pos.items():
-            G.nodes[n]['pos'] = coords
 
         return G
         
@@ -371,33 +450,38 @@ class GeneradorSBM:
             # Save base I_M for external force (avoids immediate feedback)
             I_M_base = I_M.copy()
 
-            # (b) Internal infection (same for M and E)
+            # --- Precompute per-node totals ---
+            N_node = (N_M + N_E).astype(float)
+            N_node = np.maximum(N_node, 1.0)
+
+            # (b) Internal infection (frequency-dependent)
             I_tot_node = I_M + I_E
-            lam_int = beta_household * I_tot_node
+            lam_int = beta_household * (I_tot_node / N_node)
             p_int = 1.0 - np.exp(-lam_int)
             new_IM_int = rng.binomial(S_M, p_int)
             new_IE_int = rng.binomial(S_E, p_int)
 
-            S_M = S_M - new_IM_int
-            I_M = I_M + new_IM_int
-            S_E = S_E - new_IE_int
-            I_E = I_E + new_IE_int
+            S_M -= new_IM_int; I_M += new_IM_int
+            S_E -= new_IE_int; I_E += new_IE_int
 
-            # (c) External infection (toy): beta * S_M * sum_j W_ij I^M_j
+            # (c) External infection (frequency-dependent + Binomial)
+            # compute X as weighted infected *fraction* in neighbors
             X = np.zeros(n, dtype=float)
+
+            # Avoid division by zero
+            N_M_safe = np.maximum(N_M.astype(float), 1.0)
+            IfracM = I_M_base / N_M_safe
+
             for i, j, w in edges:
-                X[i] += w * I_M_base[j]
-                X[j] += w * I_M_base[i]
+                X[i] += w * IfracM[j]
+                X[j] += w * IfracM[i]
 
-            rate_ext = beta_network * S_M * X
-            if np.any(rate_ext < 0) or (not np.all(np.isfinite(rate_ext))):
-                raise ValueError("Invalid rate_ext (negative or non-finite).")
+            lam_ext = beta_network * X
+            p_ext = 1.0 - np.exp(-lam_ext)
 
-            new_IM_ext = rng.poisson(rate_ext)
-            new_IM_ext = np.minimum(new_IM_ext, S_M)
-
-            S_M = S_M - new_IM_ext
-            I_M = I_M + new_IM_ext
+            new_IM_ext = rng.binomial(S_M, p_ext)
+            S_M -= new_IM_ext
+            I_M += new_IM_ext
 
             # (d) Invariants / sanity
             if np.any(S_M < 0) or np.any(S_E < 0) or np.any(I_M < 0) or np.any(I_E < 0):
@@ -504,10 +588,9 @@ def construir_red_manzanas_con_proyeccion_hubs(G, cfg):
         # 3. Calculate Fermi factor
         f_dist = fermi_dirac(dist)
         
-        # Final Weight = BaseWeight * Noise * Fermi
-        # Note: Noise is applied multiplicatively as before
+        # Final Weight (no longer penalized by distance as existence of edge already suffered for it)
         w_noisy = aplicar_ruido(peso_base)
-        w_final = w_noisy * f_dist
+        w_final = w_noisy
         
         new_edata[cfg.weight_attr] = w_final
         # Save distance metadata for debug/analysis if desired
