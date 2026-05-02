@@ -288,6 +288,35 @@ Nota: el optimizador reporto `optimizer_success: False` porque alcanzo el limite
 
 El SBM original logra un ajuste ligeramente mejor, pero el surrogate permite explorar el espacio de parametros de forma mas rapida. Esto justifica el uso del surrogate como herramienta de calibracion inicial o aproximacion eficiente del simulador.
 
+## Comparacion de tiempos de ejecucion
+
+Se midio el tiempo de evaluacion usando los parametros optimos del SBM original:
+
+```text
+beta_net = 0.7286968381
+beta_hh = 1.1433071362
+delta = 0.8121867768
+fermi_mu = 8.9737480256
+```
+
+La comparacion mide el tiempo para generar una curva epidemica de 100 pasos. En el surrogate se mide inferencia con el modelo ya entrenado; no incluye el tiempo de entrenamiento. En el SBM se mide la simulacion mecanicista directa.
+
+| Modelo | Configuracion medida | Tiempo |
+|---|---:|---:|
+| Surrogate AI | 1 prediccion | 0.00498 s |
+| Surrogate AI | 1000 predicciones | 4.97563 s |
+| SBM original | 1 simulacion | 1.20093 s |
+| SBM original | 20 simulaciones | 2.77914 s |
+
+Comparacion de velocidad:
+
+| Comparacion | Aceleracion aproximada |
+|---|---:|
+| Surrogate vs SBM con 1 simulacion | 241.4x mas rapido |
+| Surrogate vs SBM con 20 simulaciones | 558.6x mas rapido |
+
+Interpretacion: el SBM original conserva la dinamica mecanicista completa y logra un ajuste ligeramente mejor, pero cada evaluacion es mucho mas costosa. El surrogate permite explorar muchos parametros de forma rapida y por eso es util como aproximador inicial para calibracion.
+
 ## Galeria de resultados
 
 Esta seccion concentra las figuras principales generadas por el proyecto.
