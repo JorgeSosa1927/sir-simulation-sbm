@@ -92,13 +92,13 @@ def generate_dataset(num_samples=150, num_sims_per_sample=8):
         beta_net = np.random.uniform(0.1, 0.8)
         beta_hh = np.random.uniform(1.0, 3.5)
         delta = np.random.uniform(0.6, 1.2)
-        fermi_mu = np.random.uniform(2.0, 20.0) # Corta vs Larga distancia
+        fermi_mu = np.random.uniform(4.0, 40.0) # Corta vs Larga distancia
         
         # Consideramos incluir muestras específicas en los extremos
         if i < num_samples // 4:
-            fermi_mu = np.random.uniform(2.0, 6.0) # Asegurar datos de corta distancia
+            fermi_mu = np.random.uniform(4.0, 6.0) # Asegurar datos de corta distancia
         elif i < num_samples // 2:
-            fermi_mu = np.random.uniform(14.0, 20.0) # Asegurar datos de larga distancia
+            fermi_mu = np.random.uniform(14.0, 40.0) # Asegurar datos de larga distancia
             
         params = [beta_net, beta_hh, delta, fermi_mu]
         I_mean = run_custom_scenario(*params, num_sims=num_sims_per_sample)
@@ -116,42 +116,57 @@ def generate_dataset(num_samples=150, num_sims_per_sample=8):
     print(f"Dataset normalizado generado y guardado en {dataset_file}")
     return X, Y
 
-# 2. Arquitectura del Autoencoder (Surrogate Model)
+# 2. Arquitectura temporal autoregresiva (Surrogate Model)
 class EpidemicSurrogateNet(nn.Module):
-    def __init__(self, input_dim=4, latent_dim=32, output_dim=TMAX):
+    def __init__(self, input_dim=4, hidden_dim=128, output_dim=TMAX, num_layers=2):
         super(EpidemicSurrogateNet, self).__init__()
+        self.hidden_dim = hidden_dim
+        self.output_dim = output_dim
+        self.num_layers = num_layers
         
-        # Encoder más profundo para capturar sutilezas espaciales
-        self.encoder = nn.Sequential(
+        # Los parámetros epidemiológicos definen el estado inicial de la LSTM.
+        self.param_encoder = nn.Sequential(
             nn.Linear(input_dim, 64),
-            nn.BatchNorm1d(64),
             nn.ReLU(),
             nn.Linear(64, 128),
             nn.ReLU(),
-            nn.Linear(128, latent_dim),
-            nn.ReLU()
+            nn.Linear(128, hidden_dim * num_layers * 2)
         )
         
-        # Decoder robusto para reconstruir curvas suaves
-        self.decoder = nn.Sequential(
-            nn.Linear(latent_dim, 256),
-            nn.ReLU(),
-            nn.Linear(256, 128),
-            nn.ReLU(),
-            nn.Linear(128, output_dim)
+        # La curva se genera con dependencia temporal usando I(t-1) como entrada.
+        self.lstm = nn.LSTM(
+            input_size=1,
+            hidden_size=hidden_dim,
+            num_layers=num_layers,
+            batch_first=True
         )
+        self.decoder = nn.Linear(hidden_dim, 1)
         
-    def forward(self, x):
-        latent = self.encoder(x)
-        output = self.decoder(latent)
+    def forward(self, x, target=None, teacher_forcing_ratio=0.0):
+        batch_size = x.size(0)
+        device = x.device
         
-        # Filtro de suavizado (media móvil de 5 días) directo en la red neuronal
-        # Evita picos o ruido de un solo día en la predicción final
-        output = output.unsqueeze(1)
-        output = nn.functional.avg_pool1d(output, kernel_size=5, stride=1, padding=2)
-        output = output.squeeze(1)
+        h0_c0 = self.param_encoder(x)
+        h0_c0 = h0_c0.view(batch_size, self.num_layers, 2, self.hidden_dim)
+        h_t = h0_c0[:, :, 0, :].permute(1, 0, 2).contiguous()
+        c_t = h0_c0[:, :, 1, :].permute(1, 0, 2).contiguous()
         
-        return output
+        outputs = []
+        input_t = torch.zeros(batch_size, 1, device=device)
+        
+        for t in range(self.output_dim):
+            out, (h_t, c_t) = self.lstm(input_t.unsqueeze(1), (h_t, c_t))
+            pred = torch.sigmoid(self.decoder(out.squeeze(1)))
+            outputs.append(pred)
+            
+            use_teacher_forcing = (
+                target is not None
+                and teacher_forcing_ratio > 0.0
+                and torch.rand(1, device=device).item() < teacher_forcing_ratio
+            )
+            input_t = target[:, t:t + 1] if use_teacher_forcing else pred
+        
+        return torch.cat(outputs, dim=1)
 
 # 3. Entrenamiento
 def train_model(X, Y, epochs=500, batch_size=32):
@@ -207,7 +222,7 @@ def train_model(X, Y, epochs=500, batch_size=32):
         epoch_loss = 0.0
         for batch_X, batch_Y in train_loader:
             optimizer.zero_grad()
-            outputs = model(batch_X)
+            outputs = model(batch_X, target=batch_Y, teacher_forcing_ratio=0.5)
             loss = criterion(outputs, batch_Y)
             loss.backward()
             optimizer.step()

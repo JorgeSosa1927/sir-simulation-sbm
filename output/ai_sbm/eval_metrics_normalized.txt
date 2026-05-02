@@ -1,0 +1,4 @@
+Metricas de Evaluacion del Surrogate Model (curvas normalizadas por poblacion):
+MSE: 0.00000427
+MAE: 0.00082234
+R2: 0.9872
