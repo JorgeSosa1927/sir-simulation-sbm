@@ -73,7 +73,11 @@ def ejecutar_visualizacion():
         ax=ax1,
     )
     ax1.legend()
-    ax1.axis('off')
+    ax1.axis('on')
+    ax1.tick_params(left=True, bottom=True, labelleft=True, labelbottom=True)
+    ax1.set_xlabel("X [km]")
+    ax1.set_ylabel("Y [km]")
+    ax1.grid(True, linestyle='--', alpha=0.5)
 
     # --- PLOT 2: Projected Network (Right) ---
     print("Generating hub projection...")
@@ -188,7 +192,11 @@ def ejecutar_visualizacion():
         handles=legend_elements,
         loc=VISUALIZATION_DRAW_SETTINGS["legend_location"],
     )
-    ax2.axis('off')
+    ax2.axis('on')
+    ax2.tick_params(left=True, bottom=True, labelleft=True, labelbottom=True)
+    ax2.set_xlabel("X [km]")
+    ax2.set_ylabel("Y [km]")
+    ax2.grid(True, linestyle='--', alpha=0.5)
     
     plt.tight_layout()
     ruta_salida = VISUALIZATION_DRAW_SETTINGS["output_path"]

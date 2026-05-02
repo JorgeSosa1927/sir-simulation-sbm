@@ -1,0 +1,123 @@
+% -----------------------------------------------------------
+\begin{frame}{Complete Model Parameters (Code Configuration)}
+\scriptsize
+\setlength{\parskip}{0pt}
+\setlength{\parsep}{0pt}
+\setlength{\topsep}{2pt}
+\setlength{\partopsep}{0pt}
+\setlength{\itemsep}{2pt}
+\setlength{\leftmargini}{1.2em}
+\setlength{\leftmarginii}{1.2em}
+
+\begin{columns}[t,onlytextwidth]
+
+% ---------------- LEFT COLUMN ----------------
+\begin{column}{0.50\textwidth}
+\textbf{A. Network Structure (SBM)}
+\begin{itemize}
+  \item \texttt{block\_sizes}: $[435,\,75,\,490]$ (Soc, Hub, Non).
+  \item \texttt{mixing\_matrix}:
+  \[
+  \mathbf{P}=
+  \begin{bmatrix}
+  0.080 & 0.004 & 0.005 \\
+  0.004 & 0.000 & 0.001 \\
+  0.005 & 0.001 & 0.001
+  \end{bmatrix}
+  \]
+  \item \texttt{hub\_probs}: Off 0.4, Trans 0.1, Sch 0.4, Shop 0.1.
+  \item \texttt{seed\_gen}: $123$.
+\end{itemize}
+
+\vspace{1mm}
+\textbf{B. Population Agents}
+\begin{itemize}
+  \item \texttt{pop\_rules} (Min, Max, \%Mob):
+  \begin{itemize}
+    \setlength{\itemsep}{1pt}
+    \item Social: $(200,280,70\%)$
+    \item Non-Social: $(200,280,40\%)$
+  \end{itemize}
+\end{itemize}
+\end{column}
+
+% ---------------- RIGHT COLUMN ----------------
+\begin{column}{0.50\textwidth}
+
+\vspace{1mm}
+\textbf{C. Spatial Scale}
+\begin{itemize}
+  \item Domain: square $38 \times 38$ with initial $(435,75,490)$ blocks.
+  \item Populated valid nodes (connected): $427 \text{ (Soc)} + 136 \text{ (Non)} = 563$.
+  \item Approx. total population: $N_{\text{toy}} \approx 563 \times 240 \approx 135{,}120$ (actual $\approx 136\text{k}$).
+\end{itemize}
+
+\textbf{D. SIR Dynamics}
+\begin{itemize}
+  \item \texttt{beta\_household}: $2.289$ (internal).
+  \item \texttt{beta\_network}: $0.4469$ (external/mobile).
+  \item \texttt{delta}: $0.9592$ (recovery $\approx$ 1 steps).
+  \item \texttt{init\_inf}: $0.03\%$ (min 20 agents).
+  \item \texttt{seed\_bias}: $0.7$ (70\% to mobiles).
+  \item \texttt{tmax}: $100$ steps.
+  \item \texttt{sim\_seed}: $123$ (+ offset per run).
+\end{itemize}
+\end{column}
+
+\end{columns}
+\end{frame}
+
+% -----------------------------------------------------------
+% Slide 9: Key Results (Quantitative)
+% -----------------------------------------------------------
+\begin{frame}{Key Results: Peaks and Uncertainty}
+\scriptsize
+\setlength{\parskip}{0pt}
+\setlength{\parsep}{0pt}
+\setlength{\topsep}{2pt}
+\setlength{\partopsep}{0pt}
+\setlength{\itemsep}{2pt}
+\setlength{\leftmargini}{1.2em}
+
+\begin{columns}[T,onlytextwidth]
+  % -------- LEFT: TEXT --------
+  \begin{column}{0.40\textwidth}
+    \textbf{Peak analysis}
+
+    \vspace{1mm}
+    \textbf{Scenario S (small $\mu$)}
+    \begin{itemize}
+      \item Mean peak: $1240.67$
+      \item Std (uncertainty): $281.88$
+    \end{itemize}
+
+    \vspace{1mm}
+    \textbf{Scenario L (large $\mu$)}
+    \begin{itemize}
+      \item Mean peak: $7523.32$
+      \item Std (uncertainty): $330.77$
+    \end{itemize}
+
+    \vspace{1mm}
+    \textbf{Finding:} $\mu$ controls outbreak \textbf{shape} via long-range mixing.
+
+    \vspace{1mm}
+    \textbf{Spatial weights (Fermi--Dirac)}
+    \begin{itemize}
+      \item \texttt{weights}: Soc-Soc $0.10$, Non-Non $0.03$, Sch $0.99$
+      \item \texttt{fermi\_mu}: $5$ (Restr) vs $15$ (Free)
+      \item \texttt{fermi\_beta}: $0.2$ (abrupt)
+      \item \texttt{noise}: none
+    \end{itemize}
+  \end{column}
+
+  % -------- RIGHT: FIGURE --------
+  \begin{column}{0.60\textwidth}
+    \centering
+    \includegraphics[width=\linewidth]{output/infectados_mu_small_vs_mu_infty.png}
+
+    \vspace{0.5mm}
+    {\tiny Uncertainty bands (100 Monte Carlo simulations).}
+  \end{column}
+\end{columns}
+\end{frame}

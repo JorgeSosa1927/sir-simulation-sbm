@@ -498,6 +498,7 @@ class GeneradorSBM:
         out.meta = meta
         out.meta.update({
             "seed": seed,
+            "N_tot": N_tot,
             "K": K,
             "K_M": int(K_M),
             "K_E": int(K_E),
