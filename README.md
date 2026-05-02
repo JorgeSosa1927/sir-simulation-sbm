@@ -188,7 +188,11 @@ Validacion visual del surrogate contra el simulador original:
 
 ## Datos reales: Rusia 2022
 
-El archivo `Data_Rusia_2022.csv` contiene casos nuevos diarios.
+El archivo `Data_Rusia_2022.csv` contiene casos nuevos diarios de Rusia. Los datos reales fueron obtenidos del dashboard oficial de la Organizacion Mundial de la Salud:
+
+```text
+https://data.who.int/dashboards/covid19/data?utm_source=chatgpt.com
+```
 
 Periodo incluido:
 
@@ -302,8 +306,6 @@ Esta seccion concentra las figuras principales generadas por el proyecto.
 
 ![Nodos de la red entrenada con colormap](output/ai_sbm/nodos_red_entrenada_colormap.svg)
 
-![Validacion surrogate comparativa](output/ai_sbm/validacion_surrogate_comparativa.png)
-
 ![Validacion surrogate comparativa normalizada](output/ai_sbm/validacion_surrogate_comparativa_normalizada.png)
 
 ### Ajuste a datos reales
@@ -339,7 +341,6 @@ Esta seccion concentra las figuras principales generadas por el proyecto.
 | `output/ai_sbm/estructura_red_lstm_surrogate.svg` | Diagrama de la arquitectura LSTM surrogate |
 | `output/ai_sbm/arquitectura_red_entrenada_colormap.png` | Visualizacion de la arquitectura entrenada |
 | `output/ai_sbm/nodos_red_entrenada_colormap.svg` | Visualizacion de nodos de la red entrenada |
-| `output/ai_sbm/validacion_surrogate_comparativa.png` | Validacion comparativa del surrogate |
 | `output/ai_sbm/validacion_surrogate_comparativa_normalizada.png` | Validacion visual surrogate vs simulador |
 | `output/ai_sbm/ajuste_rusia_surrogate_shift.txt` | Parametros y metricas del ajuste surrogate |
 | `output/ai_sbm/ajuste_rusia_surrogate_shift.png` | Grafica del ajuste surrogate |
