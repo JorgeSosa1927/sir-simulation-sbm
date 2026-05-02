@@ -1,0 +1,38 @@
+Ajuste de datos de Rusia 2022 con SBM original
+Nota: ajuste fenomenologico; el SBM produce fraccion infectada y se escala a casos nuevos.
+
+Semilla surrogate:
+beta_net: 0.7530654572
+beta_hh: 1.142348201
+delta: 0.8147158245
+fermi_mu: 8.474368556
+shift_days: 3.640185258
+scale_cases: 21491861.58
+
+Bounds usados:
+beta_net: [0.6024523658, 0.7999190927]
+beta_hh: [1.002697788, 1.370817841]
+delta: [0.6925084508, 0.9369231982]
+fermi_mu: [6.355776417, 10.5929607]
+shift_days: [-3.359814742, 10.64018526]
+
+Parametros optimos:
+beta_net: 0.7286968380823987
+beta_hh: 1.1433071362479268
+delta: 0.812186776796508
+fermi_mu: 8.973748025594212
+shift_days: 7.037226265472029
+scale_cases: 17200827.1546018
+num_sims: 20
+optimizer_success: False
+optimizer_message: Maximum number of function evaluations has been exceeded.
+objective_evaluations: 79
+
+Metricas:
+mse: 82108155.8
+mae: 7276.448763
+r2: 0.9781911603
+shape_mse: 0.002471826329
+optimizer_loss: 0.002471826329
+
+Grafica: /Users/jorgeesosab/Documents/JorgeSosa/thesis/0105_cambioRed_AI_parametros_V2/output/ai_sbm/ajuste_rusia_sbm_original_20sims.png

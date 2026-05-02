@@ -1,0 +1,20 @@
+Ajuste de datos de Rusia 2022 con surrogate entrenado
+Modelo: EpidemicSurrogateNet autoregresivo
+Nota: ajuste fenomenologico; la red predice fraccion infectada y se escala a casos nuevos.
+
+Parametros optimos:
+beta_net: 0.7530654572
+beta_hh: 1.142348201
+delta: 0.8147158245
+fermi_mu: 8.474368556
+shift_days: 3.640185258
+scale_cases: 21491861.58
+
+Metricas:
+mse: 94290892.27
+mae: 7917.95224
+r2: 0.97495529
+shape_mse: 0.002713140376
+optimizer_loss: 0.002713140376
+
+Grafica: output/ai_sbm/ajuste_rusia_surrogate_shift.png
