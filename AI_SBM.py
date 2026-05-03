@@ -1,4 +1,10 @@
 import os
+
+ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
+os.environ.setdefault("MPLBACKEND", "Agg")
+os.environ.setdefault("MPLCONFIGDIR", os.path.join(ROOT_DIR, "output", "ai_sbm", "mpl_cache"))
+os.environ.setdefault("XDG_CACHE_HOME", os.path.join(ROOT_DIR, "output", "ai_sbm", "xdg_cache"))
+
 import random
 import numpy as np
 import torch
@@ -29,7 +35,7 @@ METRICS_FILE = os.path.join(OUTPUT_DIR, "eval_metrics_normalized.txt")
 
 
 # 1. Dataset Generation
-def run_custom_scenario(beta_net, beta_hh, delta, fermi_mu, num_sims=10):
+def run_custom_scenario(beta_net, beta_hh, delta, fermi_mu, num_sims=10, return_population=False):
     """Ejecuta el simulador y retorna la curva promedio de fraccion infectada.
 
     Cada replica se normaliza primero por su poblacion total y despues se
@@ -53,6 +59,7 @@ def run_custom_scenario(beta_net, beta_hh, delta, fermi_mu, num_sims=10):
     packet["G"] = H_multi
     
     all_I = []
+    all_populations = []
     base_seed = packet["seed"]
     for i in range(num_sims):
         packet["seed"] = base_seed + i + random.randint(1000, 9000)
@@ -60,6 +67,7 @@ def run_custom_scenario(beta_net, beta_hh, delta, fermi_mu, num_sims=10):
             out = generador.simulate(packet)
             # Asegurar longitud igual a TMAX
             N_tot = int(out.meta["N_tot"])
+            all_populations.append(N_tot)
             I_curve = out.I / N_tot
             if len(I_curve) < TMAX:
                 I_curve = np.pad(I_curve, (0, TMAX - len(I_curve)), 'edge')
@@ -70,9 +78,14 @@ def run_custom_scenario(beta_net, beta_hh, delta, fermi_mu, num_sims=10):
             continue
     
     if len(all_I) == 0:
+        if return_population:
+            return np.zeros(TMAX), 1
         return np.zeros(TMAX)
     
-    return np.mean(all_I, axis=0)
+    mean_curve = np.mean(all_I, axis=0)
+    if return_population:
+        return mean_curve, int(round(np.mean(all_populations)))
+    return mean_curve
 
 def generate_dataset(num_samples=150, num_sims_per_sample=8):
     """Genera datos sintéticos variando los parámetros clave."""
@@ -284,10 +297,14 @@ def plot_ultimate_validation(model, X_scaler, Y_scaler):
     
     # Simulación Original
     print("Simulando Corta Distancia (Mu=5.0)...")
-    I_real_short = run_custom_scenario(beta_net, beta_hh, delta, mu_short, num_sims=20)
+    I_real_short, pop_short = run_custom_scenario(
+        beta_net, beta_hh, delta, mu_short, num_sims=20, return_population=True
+    )
     
     print("Simulando Larga Distancia (Mu=15.0)...")
-    I_real_long = run_custom_scenario(beta_net, beta_hh, delta, mu_long, num_sims=20)
+    I_real_long, pop_long = run_custom_scenario(
+        beta_net, beta_hh, delta, mu_long, num_sims=20, return_population=True
+    )
     
     # Predicciones Surrogate
     params_short = np.array([[beta_net, beta_hh, delta, mu_short]])
@@ -317,21 +334,49 @@ def plot_ultimate_validation(model, X_scaler, Y_scaler):
     
     t = np.arange(TMAX)
     
-    plt.figure(figsize=(12, 7))
+    reference_population = int(round(np.mean([pop_short, pop_long])))
+    fig, ax = plt.subplots(figsize=(12, 7))
     
     # Trazar Larga Distancia (Mu=15) - Predominancia Libre
-    plt.plot(t, I_real_long, label=f"Original (Larga Dist., Mu=15.0)", color="blue", linestyle="--", linewidth=2, alpha=0.6)
-    plt.plot(t, I_pred_long, label=f"Surrogate (Larga Dist., Mu=15.0)", color="blue", linestyle="-", linewidth=2.5)
+    ax.plot(t, I_real_long, label=f"Original (Larga Dist., Mu=15.0)", color="blue", linestyle="--", linewidth=2, alpha=0.6)
+    ax.plot(t, I_pred_long, label=f"Surrogate (Larga Dist., Mu=15.0)", color="blue", linestyle="-", linewidth=2.5)
     
     # Trazar Corta Distancia (Mu=5) - Predominancia Local
-    plt.plot(t, I_real_short, label=f"Original (Corta Dist., Mu=5.0)", color="green", linestyle="--", linewidth=2, alpha=0.6)
-    plt.plot(t, I_pred_short, label=f"Surrogate (Corta Dist., Mu=5.0)", color="green", linestyle="-", linewidth=2.5)
+    ax.plot(t, I_real_short, label=f"Original (Corta Dist., Mu=5.0)", color="green", linestyle="--", linewidth=2, alpha=0.6)
+    ax.plot(t, I_pred_short, label=f"Surrogate (Corta Dist., Mu=5.0)", color="green", linestyle="-", linewidth=2.5)
     
-    plt.title("Validación de Modelos: Mecanicista SBM-SIR vs Autoencoder Surrogate", fontsize=14)
-    plt.xlabel("Tiempo (Pasos)", fontsize=12)
-    plt.ylabel("Fracción infectada promedio", fontsize=12)
-    plt.legend(loc="upper right", framealpha=0.9)
-    plt.grid(True, alpha=0.3)
+    ax.set_title("Validación de Modelos: Mecanicista SBM-SIR vs Autoencoder Surrogate", fontsize=14)
+    ax.set_xlabel("Tiempo (Pasos)", fontsize=12)
+    ax.set_ylabel("Fracción infectada promedio", fontsize=12)
+    ax.legend(loc="upper right", framealpha=0.9)
+    ax.grid(True, alpha=0.3)
+
+    fig.subplots_adjust(right=0.83)
+    ax.tick_params(axis="y", right=True, labelright=False)
+    y_min, y_max = ax.get_ylim()
+    for tick in ax.get_yticks():
+        if y_min <= tick <= y_max:
+            ax.text(
+                1.01,
+                tick,
+                f"{tick * reference_population:,.0f}",
+                transform=ax.get_yaxis_transform(),
+                va="center",
+                ha="left",
+                fontsize=10,
+                color="dimgray",
+            )
+    ax.text(
+        1.10,
+        0.5,
+        f"Infectados aproximados\n(N ref.={reference_population:,})",
+        transform=ax.transAxes,
+        rotation=90,
+        va="center",
+        ha="center",
+        fontsize=12,
+        color="dimgray",
+    )
     
     # Mostrar métricas agrupadas en una caja de texto
     textstr = '\n'.join((
@@ -345,7 +390,7 @@ def plot_ultimate_validation(model, X_scaler, Y_scaler):
     ))
     
     props = dict(boxstyle='round', facecolor='white', alpha=0.9, edgecolor='gray')
-    plt.gca().text(0.02, 0.95, textstr, transform=plt.gca().transAxes, fontsize=11,
+    ax.text(0.02, 0.95, textstr, transform=ax.transAxes, fontsize=11,
             verticalalignment='top', bbox=props)
     
     out_img = os.path.join(OUTPUT_DIR, "validacion_surrogate_comparativa_normalizada.png")
