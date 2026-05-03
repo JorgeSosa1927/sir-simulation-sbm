@@ -1,0 +1,37 @@
+Ajuste de datos de Rusia 2022 con SIR normal
+Modelo: SIR determinista homogeneo sin red.
+Nota: no se usa scale_cases; N es un parametro ajustado y la curva comparada es incidencia diaria.
+
+Ecuaciones:
+dS/dt = -beta*S*I/N
+dI/dt = beta*S*I/N - gamma*I
+dR/dt = gamma*I
+casos_nuevos(t) = integral diaria de beta*S*I/N
+
+Bounds usados:
+beta: [0.01, 2]
+gamma: [0.01, 1]
+log10_N: [5, 8.8]
+log10_I0: [0, 7]
+shift_days: [-20, 20]
+
+Parametros optimos:
+beta: 0.20148934023953996
+gamma: 0.08357971387335544
+r0: 2.4107445563267618
+N: 8370635.314150633
+I0: 83599.8887445574
+S0: 8287035.425406076
+R0_initial: 0.0
+shift_days: 14.29025240128248
+optimizer_success: False
+optimizer_message: Maximum number of iterations has been exceeded.
+optimizer_loss: 0.001257708623367064
+
+Metricas:
+mse: 36854962.34
+mae: 4523.617063
+r2: 0.990210912
+shape_mse: 0.001486678714
+
+Grafica: /Users/jorgeesosab/Documents/JorgeSosa/thesis/0105_cambioRed_AI_parametros_V2/output/ai_sbm/ajuste_rusia_sir_normal.png
