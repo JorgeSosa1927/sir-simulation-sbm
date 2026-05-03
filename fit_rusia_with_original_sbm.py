@@ -247,7 +247,6 @@ def save_results(df, params, metrics, pred_cases, lower, upper, seed, bounds):
     plt.figure(figsize=(13, 7))
     plt.plot(dates, real_cases, color="firebrick", linewidth=2.2, marker="o", markersize=3.5, label="Rusia datos reales")
     plt.plot(dates, pred_cases, color="darkgreen", linewidth=2.5, label="SBM original ajustado")
-    plt.fill_between(dates, lower, upper, color="darkgreen", alpha=0.15, label="Percentil 10-90")
     plt.title("Ajuste de datos de Rusia 2022 con SBM original", fontsize=15)
     plt.xlabel("Fecha", fontsize=12)
     plt.ylabel("Casos nuevos", fontsize=12)
@@ -264,6 +263,7 @@ def save_results(df, params, metrics, pred_cases, lower, upper, seed, bounds):
             f"escala = {params['scale_cases']:.2e}",
             f"simulaciones = {int(params['num_sims'])}",
             f"R2 = {metrics['r2']:.4f}",
+            f"Norm. MSE = {metrics['shape_mse']:.6f}",
         ]
     )
     plt.gca().text(

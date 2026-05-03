@@ -162,6 +162,7 @@ def save_results(df, params, metrics, pred_cases):
             f"shift = {params['shift_days']:.2f} dias",
             f"escala = {params['scale_cases']:.2e}",
             f"R2 = {metrics['r2']:.4f}",
+            f"Norm. MSE = {metrics['shape_mse']:.6f}",
         ]
     )
     plt.gca().text(
