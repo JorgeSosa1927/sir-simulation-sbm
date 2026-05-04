@@ -220,11 +220,19 @@ This figure has two roles:
 
 ## Fit to Russia 2022 Data
 
-The file `Data_Rusia_2022.csv` contains daily new cases for Russia. The fitted variable is:
+The file `Data_Rusia_2022.csv` contains real daily new cases for Russia. These empirical data were obtained from the official World Health Organization COVID-19 dashboard:
+
+```text
+https://data.who.int/dashboards/covid19/data
+```
+
+The fitted variable is:
 
 ```text
 Casos nuevos
 ```
+
+This variable corresponds to reported daily new cases and is used as the empirical reference curve for calibration.
 
 Reference period:
 
