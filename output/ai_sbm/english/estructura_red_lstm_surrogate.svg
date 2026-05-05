@@ -1,0 +1,80 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1500" height="820" viewBox="0 0 1500 820">
+<defs><marker id="arrowhead" markerWidth="12" markerHeight="8" refX="11" refY="4" orient="auto"><polygon points="0 0, 12 4, 0 8" fill="#22303c"/></marker></defs>
+<rect width="1500" height="820" fill="#fbfcfd"/>
+<text x="750.0" y="55" text-anchor="middle" font-size="24" font-weight="700" fill="#1f2933">Network Structure: Autoregressive LSTM Conditioned on Parameters</text>
+<rect x="70" y="145" width="210" height="130" rx="10" fill="#d9ecff" stroke="#22303c" stroke-width="2"/>
+<text x="175.0" y="177" text-anchor="middle" font-size="17" font-weight="700" fill="#1f2933">Input X</text>
+<text x="175.0" y="213" text-anchor="middle" font-size="13" font-weight="400" fill="#1f2933">4 parameters</text>
+<text x="175.0" y="231" text-anchor="middle" font-size="13" font-weight="400" fill="#1f2933">beta_net, beta_hh</text>
+<text x="175.0" y="249" text-anchor="middle" font-size="13" font-weight="400" fill="#1f2933">delta, fermi_mu</text>
+<rect x="360" y="125" width="255" height="170" rx="10" fill="#dcf5df" stroke="#22303c" stroke-width="2"/>
+<text x="487.5" y="157" text-anchor="middle" font-size="17" font-weight="700" fill="#1f2933">Parameter encoder</text>
+<text x="487.5" y="193" text-anchor="middle" font-size="13" font-weight="400" fill="#1f2933">Linear 4 -&gt; 64 + ReLU</text>
+<text x="487.5" y="211" text-anchor="middle" font-size="13" font-weight="400" fill="#1f2933">Linear 64 -&gt; 128 + ReLU</text>
+<text x="487.5" y="229" text-anchor="middle" font-size="13" font-weight="400" fill="#1f2933">Linear 128 -&gt; 512</text>
+<rect x="695" y="125" width="245" height="170" rx="10" fill="#fff1c8" stroke="#22303c" stroke-width="2"/>
+<text x="817.5" y="157" text-anchor="middle" font-size="17" font-weight="700" fill="#1f2933">Initial state</text>
+<text x="817.5" y="193" text-anchor="middle" font-size="13" font-weight="400" fill="#1f2933">512 values</text>
+<text x="817.5" y="211" text-anchor="middle" font-size="13" font-weight="400" fill="#1f2933">reshape to h0 and c0</text>
+<text x="817.5" y="229" text-anchor="middle" font-size="13" font-weight="400" fill="#1f2933">2 layers, hidden=128</text>
+<rect x="1015" y="125" width="235" height="170" rx="10" fill="#e9ddff" stroke="#22303c" stroke-width="2"/>
+<text x="1132.5" y="157" text-anchor="middle" font-size="17" font-weight="700" fill="#1f2933">LSTM</text>
+<text x="1132.5" y="193" text-anchor="middle" font-size="13" font-weight="400" fill="#1f2933">input_size=1</text>
+<text x="1132.5" y="211" text-anchor="middle" font-size="13" font-weight="400" fill="#1f2933">hidden_size=128</text>
+<text x="1132.5" y="229" text-anchor="middle" font-size="13" font-weight="400" fill="#1f2933">num_layers=2</text>
+<rect x="1310" y="145" width="135" height="130" rx="10" fill="#ffe0d1" stroke="#22303c" stroke-width="2"/>
+<text x="1377.5" y="177" text-anchor="middle" font-size="17" font-weight="700" fill="#1f2933">Decoder</text>
+<text x="1377.5" y="213" text-anchor="middle" font-size="13" font-weight="400" fill="#1f2933">Linear 128 -&gt; 1</text>
+<text x="1377.5" y="231" text-anchor="middle" font-size="13" font-weight="400" fill="#1f2933">Sigmoid</text>
+<rect x="70" y="505" width="210" height="120" rx="10" fill="#f0f2f4" stroke="#22303c" stroke-width="2"/>
+<text x="175.0" y="537" text-anchor="middle" font-size="17" font-weight="700" fill="#1f2933">I(0)</text>
+<text x="175.0" y="573" text-anchor="middle" font-size="13" font-weight="400" fill="#1f2933">initial zero</text>
+<text x="175.0" y="591" text-anchor="middle" font-size="13" font-weight="400" fill="#1f2933">batch x 1</text>
+<rect x="360" y="485" width="255" height="160" rx="10" fill="#e9ddff" stroke="#22303c" stroke-width="2"/>
+<text x="487.5" y="517" text-anchor="middle" font-size="17" font-weight="700" fill="#1f2933">Time step t</text>
+<text x="487.5" y="553" text-anchor="middle" font-size="13" font-weight="400" fill="#1f2933">input I(t-1)</text>
+<text x="487.5" y="571" text-anchor="middle" font-size="13" font-weight="400" fill="#1f2933">update h_t, c_t</text>
+<text x="487.5" y="589" text-anchor="middle" font-size="13" font-weight="400" fill="#1f2933">produce hidden state</text>
+<rect x="695" y="485" width="245" height="160" rx="10" fill="#ffe0d1" stroke="#22303c" stroke-width="2"/>
+<text x="817.5" y="517" text-anchor="middle" font-size="17" font-weight="700" fill="#1f2933">Prediction</text>
+<text x="817.5" y="553" text-anchor="middle" font-size="13" font-weight="400" fill="#1f2933">I(t) in [0, 1]</text>
+<text x="817.5" y="571" text-anchor="middle" font-size="13" font-weight="400" fill="#1f2933">reused as the</text>
+<text x="817.5" y="589" text-anchor="middle" font-size="13" font-weight="400" fill="#1f2933">next input</text>
+<rect x="1015" y="485" width="235" height="160" rx="10" fill="#e7eaee" stroke="#22303c" stroke-width="2"/>
+<text x="1132.5" y="517" text-anchor="middle" font-size="17" font-weight="700" fill="#1f2933">Sequence</text>
+<text x="1132.5" y="553" text-anchor="middle" font-size="13" font-weight="400" fill="#1f2933">repeat t = 1..100</text>
+<text x="1132.5" y="571" text-anchor="middle" font-size="13" font-weight="400" fill="#1f2933">concatenate</text>
+<text x="1132.5" y="589" text-anchor="middle" font-size="13" font-weight="400" fill="#1f2933">predictions</text>
+<rect x="1310" y="505" width="135" height="120" rx="10" fill="#e7eaee" stroke="#22303c" stroke-width="2"/>
+<text x="1377.5" y="537" text-anchor="middle" font-size="17" font-weight="700" fill="#1f2933">Output</text>
+<text x="1377.5" y="573" text-anchor="middle" font-size="13" font-weight="400" fill="#1f2933">curve I(t)</text>
+<text x="1377.5" y="591" text-anchor="middle" font-size="13" font-weight="400" fill="#1f2933">batch x 100</text>
+<path d="M 280 210 L 360 210" fill="none" stroke="#22303c" stroke-width="2.2" marker-end="url(#arrowhead)"/>
+
+<path d="M 615 210 L 695 210" fill="none" stroke="#22303c" stroke-width="2.2" marker-end="url(#arrowhead)"/>
+<rect x="563.0" y="180.0" width="184" height="26" rx="7" fill="#ffffff" stroke="none" stroke-width="0"/>
+<text x="655.0" y="198.0" text-anchor="middle" font-size="12" font-weight="400" fill="#1f2933">h0 + c0</text>
+<path d="M 940 210 L 1015 210" fill="none" stroke="#22303c" stroke-width="2.2" marker-end="url(#arrowhead)"/>
+
+<path d="M 1250 210 L 1310 210" fill="none" stroke="#22303c" stroke-width="2.2" marker-end="url(#arrowhead)"/>
+
+<path d="M 175 275 L 175 505" fill="none" stroke="#22303c" stroke-width="2.2" marker-end="url(#arrowhead)"/>
+<rect x="83.0" y="360.0" width="184" height="26" rx="7" fill="#ffffff" stroke="none" stroke-width="0"/>
+<text x="175.0" y="378.0" text-anchor="middle" font-size="12" font-weight="400" fill="#1f2933">start</text>
+<path d="M 280 565 L 360 565" fill="none" stroke="#22303c" stroke-width="2.2" marker-end="url(#arrowhead)"/>
+
+<path d="M 615 565 L 695 565" fill="none" stroke="#22303c" stroke-width="2.2" marker-end="url(#arrowhead)"/>
+
+<path d="M 940 565 L 1015 565" fill="none" stroke="#22303c" stroke-width="2.2" marker-end="url(#arrowhead)"/>
+
+<path d="M 1250 565 L 1310 565" fill="none" stroke="#22303c" stroke-width="2.2" marker-end="url(#arrowhead)"/>
+
+<path d="M 815 485 Q 650.0 395 485 485" fill="none" stroke="#22303c" stroke-width="2.2" marker-end="url(#arrowhead)"/>
+<rect x="558.0" y="455.0" width="184" height="26" rx="7" fill="#ffffff" stroke="none" stroke-width="0"/>
+<text x="650.0" y="473.0" text-anchor="middle" font-size="12" font-weight="400" fill="#1f2933">I(t) -&gt; I(t+1)</text>
+<path d="M 1135 295 Q 812.5 390 490 485" fill="none" stroke="#22303c" stroke-width="2.2" marker-end="url(#arrowhead)"/>
+<rect x="720.5" y="360.0" width="184" height="26" rx="7" fill="#ffffff" stroke="none" stroke-width="0"/>
+<text x="812.5" y="378.0" text-anchor="middle" font-size="12" font-weight="400" fill="#1f2933">h_t, c_t persist</text>
+<text x="750.0" y="755" text-anchor="middle" font-size="15" font-weight="400" fill="#1f2933">Model type: sequential autoregressive surrogate conditioned on parameters.</text>
+<text x="750.0" y="775" text-anchor="middle" font-size="15" font-weight="400" fill="#1f2933">Not a VAE: no mu/logvar, reparameterization, or KL term.</text>
+</svg>

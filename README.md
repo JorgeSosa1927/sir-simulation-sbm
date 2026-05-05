@@ -163,7 +163,7 @@ The loss combines:
 
 This encourages the surrogate to learn the epidemic shape, including growth, peak, decline, and curvature.
 
-![Artificial intelligence surrogate architecture](output/ai_sbm/arquitectura_red_entrenada_colormap.png)
+![Artificial intelligence surrogate architecture](output/ai_sbm/english/arquitectura_red_entrenada_colormap.png)
 
 ## Calibration Protocol
 
@@ -216,7 +216,7 @@ This figure has two roles:
 - It shows that the spatial parameter `mu` modifies epidemic dynamics clearly.
 - It verifies that the surrogate reproduces the simulator's curve shape before using it for real-data calibration.
 
-![Normalized validation of the surrogate model against the original simulator](output/ai_sbm/validacion_surrogate_comparativa_normalizada.png)
+![Normalized validation of the surrogate model against the original simulator](output/ai_sbm/english/validacion_surrogate_comparativa_normalizada.png)
 
 ## Fit to Russia 2022 Data
 
@@ -242,7 +242,7 @@ Reference period:
 
 Direct visualization:
 
-![Real Russia 2022 daily cases](plot_rusia_2022.png)
+![Real Russia 2022 daily cases](output/ai_sbm/english/plot_russia_2022.png)
 
 ## Fit Results
 
@@ -266,7 +266,7 @@ The original simulator obtains a slightly better fit, while the surrogate provid
 | `shift_days` | 3.640185258 |
 | `scale_cases` | 21491861.58 |
 
-![AI surrogate fit to real epidemic data](output/ai_sbm/ajuste_rusia_surrogate_shift.png)
+![AI surrogate fit to real epidemic data](output/ai_sbm/english/ajuste_rusia_surrogate_shift.png)
 
 ### Original Simulator Fit
 
@@ -282,7 +282,7 @@ The original simulator obtains a slightly better fit, while the surrogate provid
 
 The optimizer reached the maximum number of function evaluations, but the final numerical fit remains strong.
 
-![Original simulator fit to real epidemic data](output/ai_sbm/ajuste_rusia_sbm_original_20sims.png)
+![Original simulator fit to real epidemic data](output/ai_sbm/english/ajuste_rusia_sbm_original_20sims.png)
 
 ## Calibration Time
 
@@ -338,28 +338,32 @@ The practical strategy is therefore not to choose one model over the other, but 
 | `fit_rusia_with_surrogate.py` | Surrogate calibration against Russia data |
 | `fit_rusia_with_original_sbm.py` | Original SBM calibration against Russia data |
 | `fit_rusia_with_sir_normal.py` | Baseline SIR fit |
+| `generate_english_figures.py` | Regenerates English copies of the AI-SBM and Russia plots |
 | `Data_Rusia_2022.csv` | Real daily case data |
 | `model_output.py` | Result container for SIR trajectories |
 
 ## Generated Outputs
 
+Spanish-language figures are preserved at their original paths. The README displays the English copies stored in `output/ai_sbm/english/`.
+
 | File | Description |
 |---|---|
-| `plot_rusia_2022.png` | Visualization of Russia 2022 daily cases |
+| `output/ai_sbm/english/plot_russia_2022.png` | English visualization of Russia 2022 daily cases |
 | `output/simple_sbm_comparison.png` | Original vs projected network comparison |
 | `output/infectados_mu_small_vs_mu_infty.png` | Epidemic comparison under restrictive and freer spatial regimes |
 | `output/ai_sbm/dataset_normalized.npz` | Synthetic dataset for surrogate training |
 | `output/ai_sbm/surrogate_model_normalized.pth` | Trained surrogate weights |
 | `output/ai_sbm/eval_metrics_normalized.txt` | Surrogate evaluation metrics |
-| `output/ai_sbm/estructura_red_lstm_surrogate.svg` | LSTM surrogate architecture diagram |
-| `output/ai_sbm/arquitectura_red_entrenada_colormap.png` | Visualization of the surrogate architecture |
-| `output/ai_sbm/nodos_red_entrenada_colormap.svg` | Visualization of trained network nodes |
-| `output/ai_sbm/validacion_surrogate_comparativa.png` | Visual validation of the surrogate against the simulator |
-| `output/ai_sbm/validacion_surrogate_comparativa_normalizada.png` | Normalized validation of surrogate and simulator curves |
+| `output/ai_sbm/english/estructura_red_lstm_surrogate.svg` | English LSTM surrogate architecture diagram |
+| `output/ai_sbm/english/arquitectura_red_entrenada_colormap.png` | English visualization of the surrogate architecture |
+| `output/ai_sbm/english/nodos_red_entrenada_colormap.svg` | English visualization of trained network nodes |
+| `output/ai_sbm/english/validacion_surrogate_comparativa.png` | English visual validation of the surrogate against the simulator |
+| `output/ai_sbm/english/validacion_surrogate_comparativa_normalizada.png` | English normalized validation of surrogate and simulator curves |
 | `output/ai_sbm/ajuste_rusia_surrogate_shift.txt` | Parameters and metrics from the surrogate fit |
-| `output/ai_sbm/ajuste_rusia_surrogate_shift.png` | Surrogate fit plot |
+| `output/ai_sbm/english/ajuste_rusia_surrogate_shift.png` | English surrogate fit plot |
 | `output/ai_sbm/ajuste_rusia_sbm_original_20sims.txt` | Parameters and metrics from the original SBM fit |
-| `output/ai_sbm/ajuste_rusia_sbm_original_20sims.png` | Original SBM fit plot |
+| `output/ai_sbm/english/ajuste_rusia_sbm_original_20sims.png` | English original SBM fit plot |
+| `output/ai_sbm/english/ajuste_rusia_sir_normal.png` | English standard SIR fit plot |
 
 ## How to Run
 
@@ -391,6 +395,12 @@ Fit the original SBM using the surrogate seed:
 
 ```bash
 python3 fit_rusia_with_original_sbm.py --num-sims 20 --maxiter 25 --maxfev 80
+```
+
+Regenerate the English figures without overwriting the Spanish originals:
+
+```bash
+python3 generate_english_figures.py
 ```
 
 ## Limitations
