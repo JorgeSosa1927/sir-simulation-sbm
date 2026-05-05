@@ -216,7 +216,7 @@ This figure has two roles:
 - It shows that the spatial parameter `mu` modifies epidemic dynamics clearly.
 - It verifies that the surrogate reproduces the simulator's curve shape before using it for real-data calibration.
 
-![Normalized validation of the surrogate model against the original simulator](output/ai_sbm/english/validacion_surrogate_comparativa_normalizada.png)
+![Normalized validation of the surrogate model against the original simulator](output/ai_sbm/validacion_surrogate_comparativa_normalizada.png)
 
 ## Fit to Russia 2022 Data
 
