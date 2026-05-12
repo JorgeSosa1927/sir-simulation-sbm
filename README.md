@@ -280,108 +280,49 @@ This figure has two roles:
 - It shows that the spatial parameter `mu` modifies epidemic dynamics clearly.
 - It verifies that the surrogate reproduces the simulator's curve shape before using it for real-data calibration.
 
-![Normalized validation of the surrogate model against the original simulator](output/ai_sbm/validacion_surrogate_comparativa_normalizada.png)
+| Regime | LSTM R² |
+|---|---|
+| Short Distance ($\mu=5.0$) | 0.951 |
+| Long Distance ($\mu=15.0$) | 0.975 |
 
-## Fit to Russia 2022 Data
+![Short Distance Comparison](output/ai_sbm/english/comparativa_corta_distancia.png)
+![Long Distance Comparison](output/ai_sbm/english/comparativa_larga_distancia.png)
 
-The file `Data_Rusia_2022.csv` contains real daily new cases for Russia. These empirical data were obtained from the official World Health Organization COVID-19 dashboard:
+### Error Distribution
 
-```text
-https://data.who.int/dashboards/covid19/data
-```
+The LSTM model shows the smallest and most stable error distribution compared to Basic AE and Deep AE + Smoothing.
 
-The fitted variable is:
+![Error distribution of surrogate models](output/ai_sbm/english/boxplot_errores_modelos.png)
 
-```text
-Casos nuevos
-```
+## Fit to Saint Petersburg Winter 2022 Data
 
-This variable corresponds to reported daily new cases and is used as the empirical reference curve for calibration.
+The model was calibrated using COVID-19 monitoring data from Saint Petersburg for the Winter 2022 wave. These data capture the characteristic omicron peak.
 
 Reference period:
+- **Wave**: Winter 2022
+- **Source**: stopkoronavirus.rf (cleaned)
 
-| Start | End | Days |
-|---|---|---:|
-| 2021-12-28 | 2022-03-28 | 91 |
+### Fit Results
 
-Direct visualization:
+The LSTM surrogate provides a rapid initial calibration, which is then refined by the mechanistic SBM simulator.
 
-![Real Russia 2022 daily cases](output/ai_sbm/english/plot_russia_2022.png)
+| Model | R² | Fitting Time |
+|---|---:|---:|
+| LSTM Surrogate | 0.915 | ~31 s |
+| Surrogate + SBM | ~0.890 | ~187 s |
 
-## Fit Results
+The surrogate-assisted calibration is approximately **6x faster** than the full mechanistic refinement, supporting a hybrid exploration strategy.
 
-The surrogate fit reached an approximate coefficient of determination of 0.975. The original simulator, refined from the surrogate solution, reached approximately 0.978.
+![Empirical fitting of the surrogate and SBM model to Saint Petersburg COVID-19 monitoring data](output/ai_sbm/english/combined_wave_winter_fit.png)
 
-| Model | R2 | MAE | Shape error |
-|---|---:|---:|---:|
-| AI surrogate | 0.97495529 | 7917.95224 | 0.002713140376 |
-| Original simulator | 0.9781911603 | 7276.448763 | 0.002471826329 |
-
-The original simulator obtains a slightly better fit, while the surrogate provides faster parameter exploration.
-
-### Surrogate Fit
-
-| Parameter | Value |
-|---|---:|
-| `beta_net` | 0.7530654572 |
-| `beta_hh` | 1.142348201 |
-| `delta` | 0.8147158245 |
-| `fermi_mu` | 8.474368556 |
-| `shift_days` | 3.640185258 |
-| `scale_cases` | 21491861.58 |
-
-![AI surrogate fit to real epidemic data](output/ai_sbm/english/ajuste_rusia_surrogate_shift.png)
-
-### Original Simulator Fit
-
-| Parameter | Value |
-|---|---:|
-| `beta_net` | 0.7286968381 |
-| `beta_hh` | 1.1433071362 |
-| `delta` | 0.8121867768 |
-| `fermi_mu` | 8.9737480256 |
-| `shift_days` | 7.0372262655 |
-| `scale_cases` | 17200827.1546 |
-| `num_sims` | 20 |
-
-The optimizer reached the maximum number of function evaluations, but the final numerical fit remains strong.
-
-![Original simulator fit to real epidemic data](output/ai_sbm/english/ajuste_rusia_sbm_original_20sims.png)
-
-## Calibration Time
-
-Execution time was measured for the two calibration procedures against real epidemic data.
+The surrogate provides a rapid parameter search, while the original simulator preserves mechanistic fidelity. In the Saint Petersburg fit, both models successfully replicate the main epidemic peak.
 
 | Model | Time |
 |---|---:|
-| Surrogate | 32.92 s |
-| SBM original | 233.62 s |
+| LSTM Surrogate | 31 s |
+| Surrogate + SBM | 187 s |
 
-In minutes:
-
-| Model | Time |
-|---|---:|
-| Surrogate | 0.55 min |
-| SBM original | 3.89 min |
-
-The surrogate fit took **32.92 s**. This corresponds to calibrating the model against Russia data using the already trained neural network, so each parameter evaluation is fast and many combinations can be explored in a short time.
-
-The original SBM fit took **233.62 s**. This process is more expensive because each evaluation requires running mechanistic simulations on the original SBM network. In this configuration, calibration used 20 simulations per evaluation, making the total time considerably longer.
-
-The surrogate calibration was approximately:
-
-```text
-233.62 / 32.92 = 7.1
-```
-
-times faster than the original SBM calibration. This is a comparison between calibration procedures, not between surrogate training and mechanistic simulation.
-
-Additional plot-generation times:
-
-| Output | Time |
-|---|---:|
-| `infectados_mu_small_vs_mu_infty` | 20.90 s |
-| `validacion_surrogate_comparativa_normalizada` | 8.92 s |
+The surrogate-assisted calibration corresponds to a **6x acceleration** factor. This allows for rapid sensitivity analysis and scenario testing before performing expensive mechanistic validations.
 
 ## Interpretation
 
@@ -438,10 +379,10 @@ Spanish-language figures are preserved at their original paths. The README displ
 | `output/ai_sbm/english/validacion_surrogate_comparativa.png` | English visual validation of the surrogate against the simulator |
 | `output/ai_sbm/english/validacion_surrogate_comparativa_normalizada.png` | English normalized validation of surrogate and simulator curves |
 | `output/ai_sbm/ajuste_rusia_surrogate_shift.txt` | Parameters and metrics from the surrogate fit |
-| `output/ai_sbm/english/ajuste_rusia_surrogate_shift.png` | English surrogate fit plot |
-| `output/ai_sbm/ajuste_rusia_sbm_original_20sims.txt` | Parameters and metrics from the original SBM fit |
-| `output/ai_sbm/english/ajuste_rusia_sbm_original_20sims.png` | English original SBM fit plot |
-| `output/ai_sbm/english/ajuste_rusia_sir_normal.png` | English standard SIR fit plot |
+| `output/ai_sbm/english/comparativa_corta_distancia.png` | Short distance surrogate validation |
+| `output/ai_sbm/english/comparativa_larga_distancia.png` | Long distance surrogate validation |
+| `output/ai_sbm/english/boxplot_errores_modelos.png` | Error distribution comparison |
+| `output/ai_sbm/english/combined_wave_winter_fit.png` | Combined Saint Petersburg fit plot |
 
 ## How to Run
 
