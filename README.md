@@ -162,8 +162,6 @@ The loss combines:
 
 This encourages the surrogate to learn the epidemic shape, including growth, peak, decline, and curvature.
 
-![Artificial intelligence surrogate architecture](output/ai_sbm/english/arquitectura_red_entrenada_colormap.png)
-
 ## Model Comparison
 
 The `Model_Comparison/` directory contains specialized scripts and documentation to compare the performance of different neural architectures.
