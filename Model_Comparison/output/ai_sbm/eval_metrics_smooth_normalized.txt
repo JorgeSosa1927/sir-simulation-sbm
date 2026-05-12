@@ -1,0 +1,4 @@
+Metricas de Evaluacion del Surrogate Model (Smooth AE):
+MSE: 0.00003333
+MAE: 0.00223634
+R2: 0.8998

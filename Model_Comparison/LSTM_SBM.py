@@ -298,12 +298,12 @@ def plot_ultimate_validation(model, X_scaler, Y_scaler):
     # Simulación Original
     print("Simulando Corta Distancia (Mu=5.0)...")
     I_real_short, pop_short = run_custom_scenario(
-        beta_net, beta_hh, delta, mu_short, num_sims=20, return_population=True
+        beta_net, beta_hh, delta, mu_short, num_sims=100, return_population=True
     )
     
     print("Simulando Larga Distancia (Mu=15.0)...")
     I_real_long, pop_long = run_custom_scenario(
-        beta_net, beta_hh, delta, mu_long, num_sims=20, return_population=True
+        beta_net, beta_hh, delta, mu_long, num_sims=100, return_population=True
     )
     
     # Predicciones Surrogate
@@ -395,7 +395,7 @@ def main():
     X, Y = generate_dataset(num_samples=300, num_sims_per_sample=20)
     
     # 2. Entrenar con nueva arquitectura y pérdida de pico
-    model, X_test, Y_test, X_scaler, Y_scaler = train_model(X, Y, epochs=600)
+    model, X_test, Y_test, X_scaler, Y_scaler = train_model(X, Y, epochs=1000)
     
     # 3. Evaluar
     evaluate_model(model, X_test, Y_test, Y_scaler)

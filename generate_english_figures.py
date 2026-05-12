@@ -184,6 +184,62 @@ def save_original_sbm_fit_plot(df):
     plt.close(fig)
 
 
+def save_combined_russia_fit_plot(df, model, x_scaler, y_scaler):
+    surrogate_params = read_results(AI_OUTPUT_DIR / "ajuste_rusia_surrogate_shift.txt")
+    sbm_params = read_results(AI_OUTPUT_DIR / "ajuste_rusia_sbm_original_20sims.txt")
+
+    dates = df["Fecha"].iloc[:TMAX]
+    real_cases = df["Casos nuevos"].to_numpy(dtype=float)[:TMAX]
+
+    surrogate_fraction = predict_curve(
+        model,
+        x_scaler,
+        y_scaler,
+        [
+            surrogate_params["beta_net"],
+            surrogate_params["beta_hh"],
+            surrogate_params["delta"],
+            surrogate_params["fermi_mu"],
+        ],
+    )
+    surrogate_shifted = shift_surrogate(surrogate_fraction, surrogate_params["shift_days"], len(real_cases))
+    surrogate_cases = surrogate_params.get("scale_cases", optimal_scale(surrogate_shifted, real_cases)) * surrogate_shifted
+
+    sbm_curve, _ = run_sbm_average(
+        sbm_params["beta_net"],
+        sbm_params["beta_hh"],
+        sbm_params["delta"],
+        sbm_params["fermi_mu"],
+        num_sims=int(sbm_params.get("num_sims", 20)),
+        seed_offset=stable_param_seed(
+            [
+                sbm_params["beta_net"],
+                sbm_params["beta_hh"],
+                sbm_params["delta"],
+                sbm_params["fermi_mu"],
+                sbm_params["shift_days"],
+            ]
+        ),
+    )
+    sbm_shifted = shift_sbm(sbm_curve, sbm_params["shift_days"], len(real_cases))
+    sbm_cases = sbm_params.get("scale_cases", optimal_scale(sbm_shifted, real_cases)) * sbm_shifted
+
+    fig, ax = plt.subplots(figsize=(13, 7))
+    ax.plot(dates, real_cases, color="firebrick", linewidth=2.2, marker="o", markersize=3.5, label="Russia observed data")
+    ax.plot(dates, surrogate_cases, color="navy", linewidth=2.5, label="Fitted surrogate")
+    ax.plot(dates, sbm_cases, color="darkgreen", linewidth=2.5, label="Fitted original SBM")
+    ax.set_title("Russia 2022 Fit Comparison", fontsize=18)
+    ax.set_xlabel("Date", fontsize=14)
+    ax.set_ylabel("New cases", fontsize=14)
+    ax.tick_params(axis="both", labelsize=12)
+    ax.grid(True, linestyle="--", alpha=0.45)
+    ax.legend(loc="upper right", framealpha=0.9, fontsize=12)
+    plt.xticks(rotation=45)
+    fig.tight_layout()
+    fig.savefig(ENGLISH_DIR / "ajuste_rusia_sbm_surrogate_comparison.png", dpi=300, bbox_inches="tight")
+    plt.close(fig)
+
+
 def save_sir_fit_plot(df):
     params = read_results(AI_OUTPUT_DIR / "ajuste_rusia_sir_normal.txt")
     dates = df["Fecha"].iloc[:TMAX]
@@ -512,6 +568,7 @@ def main():
     save_russia_data_plot(df)
     save_surrogate_fit_plot(df, model, x_scaler, y_scaler)
     save_original_sbm_fit_plot(df)
+    save_combined_russia_fit_plot(df, model, x_scaler, y_scaler)
     save_sir_fit_plot(df)
     save_validation_plot(model, x_scaler, y_scaler, "validacion_surrogate_comparativa_normalizada.png")
     save_validation_plot(model, x_scaler, y_scaler, "validacion_surrogate_comparativa.png")

@@ -1,0 +1,4 @@
+Metricas de Evaluacion del Surrogate Model (Basic AE):
+MSE: 0.00003142
+MAE: 0.00251620
+R2: 0.9049

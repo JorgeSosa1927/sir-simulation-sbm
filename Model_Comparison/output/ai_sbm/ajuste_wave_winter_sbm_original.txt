@@ -1,0 +1,39 @@
+Ajuste de datos Wave Winter con SBM original
+
+Semilla surrogate:
+beta_net: 0.2143
+beta_hh: 2.4335
+delta: 1.1722
+fermi_mu: 22.4418
+scale_cases: 1724663.41
+shift_days: 4
+
+Bounds usados:
+beta_net: [0.17144, 0.25716]
+beta_hh: [1.9468, 2.9202]
+delta: [0.99637, 1.196644192]
+fermi_mu: [16.83135, 19.94624286]
+shift_days: [-3, 11]
+
+Parametros optimos:
+beta_net: 0.2235724878845205
+beta_hh: 2.5483942846491474
+delta: 1.0552091989317305
+fermi_mu: 19.207485965140435
+shift_days: 4.0
+scale_cases: 1447002.8910357412
+num_sims: 10
+optimizer_success: False
+optimizer_message: Maximum number of function evaluations has been exceeded.
+objective_evaluations: 60
+
+Metricas:
+mse: 4621135.027
+mse_relativo: 0.09982669324
+mae: 1294.483168
+r2: 0.9001733068
+shape_mse: 0.01014576677
+optimizer_loss: 0.01014576677
+Tiempo de ejecución: 186.96 s
+
+Grafica: /Users/jorgeesosab/Documents/JorgeSosa/thesis/AI/output/ai_sbm/ajuste_wave_winter_sbm_original.png

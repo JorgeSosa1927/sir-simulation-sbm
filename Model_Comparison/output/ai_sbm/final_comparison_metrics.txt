@@ -1,0 +1,9 @@
+Métricas por Escenario:
+SHORT (Mu=5.0):
+  LSTM R2: 0.9051
+  SmoothAE R2: -0.7083
+  BasicAE R2: -0.8597
+LONG (Mu=15.0):
+  LSTM R2: 0.9975
+  SmoothAE R2: 0.9196
+  BasicAE R2: 0.8928

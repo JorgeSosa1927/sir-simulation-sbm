@@ -149,10 +149,9 @@ It is implemented in `AI_SBM.py` as `EpidemicSurrogateNet`.
 
 Architecture:
 
-- Four-parameter input.
-- Multi-layer encoder.
-- Autoregressive LSTM recurrent model.
-- 100-step normalized infected-fraction output.
+- **Autoregressive LSTM (LSTM)**: The primary architecture used for calibration. It uses parameters to initialize an LSTM memory state and generates the curve step-by-step, respecting temporal sequences.
+- **Basic Autoencoder (Basic AE)**: Compresses parameters into a latent space and reconstructs the entire curve at once.
+- **Deep AE + Smoothing**: A deeper autoencoder that applies a smoothing filter to prevent sudden jumps in the predicted curve.
 
 The loss combines:
 
@@ -164,6 +163,71 @@ The loss combines:
 This encourages the surrogate to learn the epidemic shape, including growth, peak, decline, and curvature.
 
 ![Artificial intelligence surrogate architecture](output/ai_sbm/english/arquitectura_red_entrenada_colormap.png)
+
+## Model Comparison
+
+The `Model_Comparison/` directory contains specialized scripts and documentation to compare the performance of different neural architectures.
+
+### Surrogate Architectures Detailed
+
+#### 1. Basic Autoencoder (Basic AE)
+Compreses the 4 starting parameters into a latent space summary and decodes them into the entire curve $I(t)$ instantly.
+
+```mermaid
+graph TD
+    In["Inputs (4 Parameters)"] --> Enc["Encoder (Compresses)"]
+    Enc --> Latent["Latent Space (Summary)"]
+    Latent --> Dec["Decoder (Uncompresses)"]
+    Dec --> Out["Entire Curve I(t) drawn at once"]
+    
+    style In fill:#dbeafe,stroke:#1e3a8a
+    style Enc fill:#dbeafe,stroke:#1e3a8a
+    style Latent fill:#93c5fd,stroke:#1e3a8a
+    style Dec fill:#dbeafe,stroke:#1e3a8a
+    style Out fill:#dbeafe,stroke:#1e3a8a
+```
+
+#### 2. Deep Autoencoder + Smoothing (Deep AE + Smooth)
+A deeper version of the Basic AE that includes a smoothing filter to ensure the predicted epidemic curve is stable and realistic.
+
+```mermaid
+graph TD
+    In["Inputs (4 Parameters)"] --> Enc["Deep Encoder"]
+    Enc --> Latent["Deep Latent Space"]
+    Latent --> Dec["Deep Decoder"]
+    Dec --> Smooth["Smoothing Filter"]
+    Smooth --> Out["Stable Epidemic Curve"]
+
+    style In fill:#ccfbf1,stroke:#0f766e
+    style Enc fill:#ccfbf1,stroke:#0f766e
+    style Latent fill:#5eead4,stroke:#0f766e
+    style Dec fill:#ccfbf1,stroke:#0f766e
+    style Smooth fill:#ffedd5,stroke:#c2410c
+    style Out fill:#ccfbf1,stroke:#0f766e
+```
+
+#### 3. Autoregressive LSTM (LSTM)
+The most sophisticated model, which sets an initial memory state from the input parameters and predicts the curve day-by-day ($t \to t+1$).
+
+```mermaid
+graph TD
+    In["Inputs (4 Parameters)"] --> Enc["Parameter Encoder"]
+    Enc --> State["Initial State (Memory)"]
+    State --> LSTM["LSTM Network"]
+    LSTM --> Step["Step-by-step: Yesterday → Today"]
+    
+    style In fill:#f3e8ff,stroke:#6b21a8
+    style Enc fill:#f3e8ff,stroke:#6b21a8
+    style State fill:#d8b4fe,stroke:#6b21a8
+    style LSTM fill:#f3e8ff,stroke:#6b21a8
+    style Step fill:#f3e8ff,stroke:#6b21a8
+```
+
+### Comparison Tools
+
+- `final_comparison.py`: Orchestrates a side-by-side comparison of all three surrogates against ground truth SBM simulations.
+- `plot_boxplots.py`: Generates statistical comparisons of error metrics ($R^2$, MAE) across different regimes.
+- `ArchNN_Explanation.md`: A dual-language (English/Spanish) guide to the architectures.
 
 ## Calibration Protocol
 
@@ -341,6 +405,20 @@ The practical strategy is therefore not to choose one model over the other, but 
 | `generate_english_figures.py` | Regenerates English copies of the AI-SBM and Russia plots |
 | `Data_Rusia_2022.csv` | Real daily case data |
 | `model_output.py` | Result container for SIR trajectories |
+
+### Model Comparison Directory (`Model_Comparison/`)
+
+| File | Description |
+|---|---|
+| `LSTM_SBM.py` | Implementation of the autoregressive LSTM surrogate |
+| `Autoencouder_Smoth_SBM.py` | Deep Autoencoder with smoothing layer |
+| `BasicAE_SBM.py` | Simplified Autoencoder architecture |
+| `final_comparison.py` | Script to compare all surrogates against the simulator |
+| `plot_boxplots.py` | Statistical visualization of model errors |
+| `ArchNN_Explanation.md` | Simple guide and diagrams for the architectures |
+| `fit_lstm_wave_winter.py` | Specific fitting routine for winter waves using LSTM |
+| `fit_wave_winter_sbm_opt.py` | SBM optimization for winter waves |
+| `plot_combined_fit.py` | Visualizes the combined results of various fits |
 
 ## Generated Outputs
 
