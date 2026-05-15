@@ -1,0 +1,465 @@
+\documentclass[12pt,a4paper,twocolumn]{article}
+\usepackage{float}
+% ============================================================
+% Plantilla compacta de artículo en dos columnas
+% Compilar con pdfLaTeX, XeLaTeX o LuaLaTeX.
+% ============================================================
+
+\usepackage{iftex}
+
+\ifPDFTeX
+    \usepackage[T1]{fontenc}
+    \usepackage[utf8]{inputenc}
+    \usepackage{newtxtext,newtxmath}
+\else
+    \usepackage{fontspec}
+    \IfFontExistsTF{Times New Roman}
+        {\setmainfont{Times New Roman}}
+        {\setmainfont{TeX Gyre Termes}}
+    \usepackage{unicode-math}
+    \IfFontExistsTF{TeX Gyre Termes Math}
+        {\setmathfont{TeX Gyre Termes Math}}
+        {}
+\fi
+
+\usepackage[spanish,es-tabla]{babel}
+\usepackage[
+    top=20mm,
+    bottom=25mm,
+    left=20mm,
+    right=20mm,
+    columnsep=7mm
+]{geometry}
+
+\usepackage{graphicx}
+\usepackage{float}
+\usepackage{amsmath}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{caption}
+\usepackage{indentfirst}
+\usepackage{hyperref}
+\usepackage{titlesec}
+\usepackage{stfloats}
+
+\hypersetup{
+    colorlinks=true,
+    linkcolor=black,
+    citecolor=black,
+    urlcolor=black
+}
+
+\linespread{1.0}
+\setlength{\parindent}{10mm}
+\setlength{\parskip}{0pt}
+
+\captionsetup{
+    font=small,
+    labelfont=bf,
+    justification=centering
+}
+
+% Espaciado compacto para artículo con límite de páginas
+\titlespacing*{\section}{0pt}{1.0em}{0.5em}
+\titlespacing*{\subsection}{0pt}{0.8em}{0.4em}
+
+% Comando para figuras dentro de una columna.
+\newcommand{\articlefigure}[4]{
+\begin{figure}[H]
+    \centering
+    \IfFileExists{#1}
+        {\includegraphics[width=#2\linewidth]{#1}}
+        {\fbox{\parbox[c][38mm][c]{#2\linewidth}{\centering Marcador de posición:\\ \texttt{#1}}}}
+    \caption{#3}
+    \label{#4}
+\end{figure}
+}
+
+\newcommand{\articlefigurewide}[4]{
+\begin{figure*}[t!]
+    \centering
+    \IfFileExists{#1}
+        {\includegraphics[width=#2\textwidth]{#1}}
+        {\fbox{\parbox[c][45mm][c]{#2\textwidth}{\centering Marcador de posición:\\ \texttt{#1}}}}
+    \caption{#3}
+    \label{#4}
+\end{figure*}
+}
+
+\begin{document}
+
+% ============================================================
+% Bloque superior en una columna
+% ============================================================
+
+\twocolumn[
+\begin{@twocolumnfalse}
+
+\noindent UDC 519.6:616-036.22
+
+\vspace{0.5em}
+
+\begin{center}
+{\bfseries\Large Modelado de la Propagación de Epidemias Urbanas mediante Redes de Contacto Complejas y un Subrogado de Inteligencia Artificial}
+
+\vspace{0.8em}
+
+{\bfseries Jorge Javier Sosa Briseño}
+\end{center}
+
+\vspace{0.5em}
+
+\section*{Resumen}
+
+Este artículo presenta un marco computacional híbrido para modelar la propagación de epidemias en una población urbana utilizando una representación basada en agentes agregados, un modelo de bloques estocásticos modificado, fricción espacial, proyección de hubs, dinámica SIR estocástica estratificada y un subrogado de inteligencia artificial. El propósito del trabajo es evaluar si una red espacial simplificada puede reproducir los efectos cualitativos observados en modelos epidémicos detallados basados en agentes, reduciendo al mismo tiempo el costo de la exploración de parámetros y la calibración.
+
+El modelo reemplaza los agentes individuales por bloques de población social y no social agregados, representa los centros de actividad urbana como hubs no poblados y proyecta estos hubs en enlaces de atajo efectivos. La restricción espacial se introduce a través de una función de distancia de Fermi-Dirac, y la propagación epidémica se simula mediante transmisión interna dentro de los bloques y externa entre bloques. Se comparan tres arquitecturas subrogadas: un autoencoder básico, un autoencoder profundo con suavizado y una red LSTM autoregresiva.
+
+Los resultados muestran que el subrogado LSTM proporciona la aproximación más estable del simulador, alcanzando un $R^2=0.951$ en el régimen de corta distancia y $R^2=0.975$ en el régimen de larga distancia. En el experimento de ajuste empírico utilizando datos de monitoreo de COVID-19 de San Petersburgo del invierno de 2022, el subrogado LSTM alcanzó un $R^2=0.915$, mientras que la validación del SBM asistida por el subrogado alcanzó aproximadamente $R^2=0.890$. El subrogado redujo el tiempo de ajuste de aproximadamente 187 s a 31 s, lo que corresponde a una aceleración de aproximadamente $6\times$. Estos resultados respaldan una estrategia de calibración híbrida donde el subrogado permite una exploración rápida y el simulador mecanicista proporciona la validación final.
+
+
+\section*{Palabras clave}
+
+modelado de epidemias; redes espaciales; modelo de bloques estocásticos; proyección de hubs; modelo susceptible--infectado--recuperado; modelo subrogado de inteligencia artificial; red de memoria a largo plazo; calibración de parámetros; epidemiología computacional.
+
+\section*{Agradecimientos}
+
+Deseo agradecer a mi supervisor académico, Vasiliy Leonenko, y a mis colaborador  de investigación Jefferson Vaca por su invaluable orientación metodológica durante el desarrollo de este modelo y la preparación del manuscrito.
+
+\vspace{1em}
+
+\end{@twocolumnfalse}
+]
+
+% ============================================================
+% Texto principal en dos columnas
+% ============================================================
+
+\section*{Introducción}
+
+La estructura espacial y la heterogeneidad de los contactos son factores centrales en la propagación de epidemias. Los modelos compartimentales clásicos son útiles para describir la dinámica epidémica agregada, pero generalmente asumen una mezcla homogénea y, por lo tanto, no pueden representar explícitamente cómo las restricciones espaciales, los lugares de trabajo, las escuelas, el transporte y los patrones de contacto locales modifican la forma de un brote. Por otro lado, los modelos detallados basados en agentes pueden representar a los individuos y sus contactos diarios, pero su calibración y ejecución repetida pueden ser computacionalmente costosas.
+
+La línea de modelado de referencia para este trabajo es el estudio espacialmente explícito de brotes de influenza en ciudades rusas, donde se demostró que los patrones de contacto humano afectan fuertemente la altura del pico epidémico y la duración del brote. En particular, Leonenko, Arzamastsev y Bobashev demostraron que una mezcla más intensa puede producir picos de incidencia más altos y brotes más cortos, mientras que las estructuras de contacto más restringidas pueden aplanar y prolongar las curvas epidémicas [1]. Trabajos relacionados sobre poblaciones sintéticas para San Petersburgo también respaldan la importancia de reglas explícitas de asignación espacial y de contacto [2].
+
+El presente artículo propone un nivel de modelado intermedio entre un simulador completo basado en individuos y un modelo compartimentar puramente agregado. En lugar de representar a cada persona como un agente separado, el modelo agrupa a los individuos estratidicados en bloques de población agregados. Estos bloques se conectan mediante un modelo de bloques estocásticos (SBM) [4] modificado con fricción espacial y proyección de hubs. La hipótesis principal es que esta representación compacta puede preservar los mecanismos epidémicos cualitativos de interés (mezcla local frente a largo alcance, restricción espacial y formación de picos) al tiempo que hace que la simulación y la calibración sean más eficientes.
+
+El propósito de este trabajo es construir y evaluar un modelado epidémico híbrido que combina: (i) una representación ABM agregada, (ii) proyección de contactos mediada por hubs, (iii) dinámica SIR estocástica estratificada (sociales y no sociales), (iv) tres arquitecturas subrogadas de IA (Autoencoders y LSTM), y (v) calibración frente a datos epidémicos reales. El artículo se centra en el compromiso entre la fidelidad mecanicista y la eficiencia computacional, demostrando cómo el modelo subrogado puede servir como un potente acelerador para la epidemiología urbana.
+
+\section*{Construcción de la Red Espacial Agregada}
+
+La red se genera como un modelo de bloques estocásticos modificado. Cada nodo pertenece a una de tres categorías: bloques sociales, hubs o bloques no sociales. Los bloques sociales y no sociales almacenan poblaciones residentes, mientras que los hubs representan ubicaciones de actividad urbana compartida, como escuelas, oficinas, puntos de transporte y tiendas.
+
+Los tamaños de bloque utilizados en la implementación actual son 435 bloques sociales, 75 hubs y 490 bloques no sociales. Después de filtrar a los nodos poblados conectados, la red proyectada de trabajo contiene 427 nodos sociales y 136 nodos no sociales (563 nodos en total). Dado que cada nodo poblado almacena aproximadamente 200--280 individuos, la población total efectiva es
+\[
+N_{\mathrm{tot}}\approx 563 \times 240 \approx 135{,}120.
+\]
+La matriz de mezcla base se define como
+\[
+\mathbf{P}= 
+\begin{pmatrix}
+0.080 & 0.004 & 0.005\\
+0.004 & 0.000 & 0.001\\
+0.005 & 0.001 & 0.001
+\end{pmatrix}.
+\]
+Para dos nodos $i$ y $j$, la probabilidad de conexión base es
+\[
+p_{\mathrm{base}}(i,j)=B_{z_i,z_j},
+\]
+donde $B_{z_i,z_j}$ es el elemento de $\mathbf{P}$ para los tipos de bloque $z_i, z_j$.
+
+Cada nodo tiene asignada una posición en un dominio bidimensional abstracto de tamaño $38\times38$. La distancia entre dos nodos es
+\[
+d_{ij}=\sqrt{(x_i-x_j)^2+(y_i-y_j)^2}.
+\]
+La restricción espacial se introduce mediante una función de Fermi-Dirac:
+\[
+f(d_{ij})=\frac{1}{\exp(\beta_F(d_{ij}-\mu))+1}.
+\]
+donde $\mu$ es el umbral de distancia y $\beta_F$ la rigidez de la restricción espacial. Los valores pequeños de $\mu$ representan conectividad restrictiva y los grandes mezcla de mayor alcance.
+
+La probabilidad de formación de enlaces depende no solo del tipo de bloque sino también del mecanismo de contacto. Las interacciones directas y relacionadas con la escuela son sensibles a la distancia, mientras que los mecanismos de oficina, transporte y tienda pueden crear atajos de mayor alcance:
+\[
+p_{\mathrm{mec}}=
+\begin{cases}
+p_{\mathrm{base}}f(d_{ij}), & \text{directo},\\
+p_{\mathrm{base}}f(d_{ij}), & \text{escuela},\\
+p_{\mathrm{base}}, & \text{oficina},\\
+p_{\mathrm{base}}, & \text{transporte},\\
+p_{\mathrm{base}}, & \text{tienda}.
+\end{cases}
+\]
+Si son posibles múltiples mecanismos, su probabilidad combinada por la teoría de fallos es
+\[
+p_{\mathrm{final}}=1-\prod_m(1-p_m),
+\]
+donde $p_m$ es la probabilidad por mecanismo. Esta forma asegura que la probabilidad final sea la unión de todos los canales posibles.
+
+\articlefigure{simple_sbm_comparison.png}{0.95}{Red espacial agregada original y proyectada. La red original contiene bloques sociales, hubs y bloques no sociales. La red proyectada elimina los hubs y los reemplaza por enlaces efectivos entre bloques.}{fig:network_projection}
+
+\section*{Proyección de Hubs y Pesos de los Enlaces}
+
+Los hubs no se conservan como nodos de población finales. En su lugar, se proyectan como enlaces efectivos entre bloques poblados. Esta operación representa el hecho de que dos bloques residenciales pueden interactuar indirectamente si comparten la misma escuela, lugar de trabajo, punto de transporte o tienda.
+
+Después de la proyección, el grafo puede contener múltiples enlaces entre el mismo par de bloques. Antes de la simulación de la epidemia, estos enlaces se combinan en un único grafo ponderado. Si existen múltiples pesos $w_{ij}^{(k)}$ entre los nodos $i$ y $j$, el peso del enlace combinado es
+\[
+W_{ij}=1-\prod_k(1-w_{ij}^{(k)}).
+\]
+donde $w_{ij}^{(k)}$ es el peso del enlace $k$. La expresión define la probabilidad de conexión efectiva $W_{ij}$ entre bloques.
+
+\begin{table}[H]
+\centering
+\small
+\caption{Pesos de interacción utilizados en la red proyectada agregada.}
+\label{tab:weights}
+\begin{tabular}{lc}
+\toprule
+Tipo de interacción & Peso \\
+\midrule
+social--social & 0.10 \\
+social--no social & 0.06 \\
+no social--no social & 0.03 \\
+oficina & 0.03 \\
+transporte & 0.02 \\
+escuela & 0.99 \\
+tienda & 0.01 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\section*{Dinámica Epidémica Estocástica}
+
+Cada nodo poblado almacena subpoblaciones móviles y estáticas:
+\[
+N_i=N_i^M+N_i^E.
+\]
+Los bloques sociales contienen entre 200 y 280 individuos, con una fracción móvil de 0.7. Los bloques no sociales contienen entre 200 y 280 individuos, con una fracción móvil de 0.4. Los hubs no almacenan población residente.
+
+El proceso epidémico sigue una formulación estocástica susceptible--infectado--recuperado. Para cada nodo poblado, el modelo almacena
+\[
+S_i^M,\;I_i^M,\;R_i^M
+\quad \text{y} \quad
+S_i^E,\;I_i^E,\;R_i^E,
+\]
+donde los superíndices \(M\) y \(E\) representan individuos móviles y estáticos, respectivamente.
+
+Antes de comenzar la simulación, todos los individuos se inicializan como susceptibles:
+\[
+S_i^M(0)=N_i^M,\qquad S_i^E(0)=N_i^E,
+\]
+\[
+I_i^M(0)=I_i^E(0)=R_i^M(0)=R_i^E(0)=0.
+\]
+
+El número inicial de infectados se define globalmente como
+\[
+K=\max\left(K_{\min},\;\mathrm{round}(\rho_0 N_{\mathrm{tot}})\right),
+\]
+donde \(K_{\min}\) es el número mínimo de infectados iniciales, \(\rho_0\) es la fracción inicial de infectados y
+\[
+N_{\mathrm{tot}}=\sum_i \left(N_i^M+N_i^E\right)
+\]
+es la población total representada en el modelo.
+
+Los individuos infectados iniciales se asignan a los nodos utilizando un sesgo de siembra $b_M=0.7$ hacia la población móvil. En la configuración calibrada, utilizamos $\beta_{\mathrm{hogar}}=2.289$ (transmisión interna), $\beta_{\mathrm{red}}=0.4469$ (transmisión por red) y $\delta=0.9592$ (tasa de recuperación), con un horizonte de simulación de $t_{\max}=100$ pasos.
+
+Los infectados iniciales se asignan aleatoriamente a los nodos según el número de susceptibles disponibles en cada grupo. Para la población móvil, la probabilidad de que una infección inicial móvil se asigne al nodo \(i\) es
+\[
+P_i^M=\frac{S_i^M}{\sum_j S_j^M}.
+\]
+Del mismo modo, para la población estática,
+\[
+P_i^E=\frac{S_i^E}{\sum_j S_j^E}.
+\]
+Después de esta inicialización, los compartimentos susceptibles correspondientes disminuyen y los compartimentos infectados aumentan.
+
+La recuperación se muestrea utilizando
+\[
+p_{\mathrm{rec}}=1-\exp(-\delta).
+\]
+Así, el número de nuevos individuos recuperados se obtiene como
+\[
+\Delta R_i^M \sim \mathrm{Binomial}(I_i^M,p_{\mathrm{rec}}),
+\]
+\[
+\Delta R_i^E \sim \mathrm{Binomial}(I_i^E,p_{\mathrm{rec}}).
+\]
+
+La transmisión interna dentro de un nodo está determinada por la fracción de infectados dentro de la unidad de población local:
+\[
+\lambda_i^{\mathrm{int}}
+=
+\beta_{\mathrm{hogar}}
+\frac{I_i^M+I_i^E}{N_i},
+\]
+\[
+p_i^{\mathrm{int}}=1-\exp(-\lambda_i^{\mathrm{int}}),
+\]
+donde $\lambda_i^{\mathrm{int}}$ es la fuerza de infección interna y $p_i^{\mathrm{int}}$ la probabilidad diaria de contagio local.
+Las nuevas infecciones internas se muestrean de las poblaciones susceptibles móviles y estáticas:
+\[
+\Delta I_i^{M,\mathrm{int}} \sim \mathrm{Binomial}(S_i^M,p_i^{\mathrm{int}}),
+\]
+\[
+\Delta I_i^{E,\mathrm{int}} \sim \mathrm{Binomial}(S_i^E,p_i^{\mathrm{int}}).
+\]
+
+La transmisión externa a través de la red de contactos $X_i$ representa la suma ponderada de infectados móviles de los nodos vecinos $\mathcal{N}(i)$:
+\[
+X_i=\sum_{j\in \mathcal{N}(i)}W_{ij}\frac{I_j^M}{N_j^M}.
+\]
+La fuerza externa de infección se define como
+\[
+\lambda_i^{\mathrm{ext}}=\beta_{\mathrm{red}}X_i,
+\]
+con probabilidad de infección
+\[
+p_i^{\mathrm{ext}}=1-\exp(-\lambda_i^{\mathrm{ext}}),
+\]
+donde $\lambda_i^{\mathrm{ext}}$ es la fuerza de infección externa, aplicada solo a los susceptibles móviles:
+\[
+\Delta I_i^{M,\mathrm{ext}} \sim \mathrm{Binomial}(S_i^M,p_i^{\mathrm{ext}}).
+\]
+
+Por lo tanto, el modelo separa dos mecanismos de transmisión. La transmisión interna afecta tanto a los individuos móviles como a los estáticos dentro de la misma unidad de población, mientras que la transmisión externa actúa a través de la red proyectada de contactos y solo afecta a los individuos susceptibles móviles. Esta estructura permite representar tanto el contagio local dentro de los bloques de población como el contagio impulsado por la movilidad entre diferentes unidades de población.
+
+\section*{Modelo Subrogado de Inteligencia Artificial}
+
+El modelo subrogado de inteligencia artificial está diseñado para aproximar el mapeo estocástico de los parámetros epidémicos y espaciales a las trayectorias de infectados. Se evaluaron tres arquitecturas:
+\begin{enumerate}
+    \item \textbf{Autoencoder Básico:} Reconstruye directamente la curva epidémica a partir de los parámetros a través de un espacio latente de 16 dimensiones. Es rápido pero carece de memoria temporal explícita.
+    \item \textbf{Autoencoder Profundo con Suavizado:} Utiliza una estructura de codificador-decodificador más profunda e incorpora penalizaciones de forma (pico, pendiente y curvatura) para reducir la inestabilidad.
+    \item \textbf{LSTM Autoregresivo:} Los parámetros inicializan una red LSTM de 2 capas que genera la trayectoria de forma secuencial ($I(t-1) \rightarrow I(t)$). Esta arquitectura captura mejor las dependencias temporales del proceso epidémico.
+\end{enumerate}
+
+Los modelos subrogados se entrenan con datos sintéticos producidos por el simulador SBM-SIR. El LSTM en los experimentos de prueba mostro mejor ajuste por lo que en la etapa de calibracion se utilizo unicamente el LSTM con un enfoque hibidro detallado a continación. 
+
+\section*{Protocolo de Calibración y Evaluación}
+
+La calibración utiliza dos etapas. Primero, el modelo subrogado busca rápidamente una buena configuración de parámetros. Segundo, el simulador original se inicializa a partir de la solución del modelo subrogado y se refina mediante simulaciones estocásticas repetidas.
+
+El vector ajustado $\theta=(\beta_{\mathrm{red}},\beta_{\mathrm{hogar}},\delta,\mu,\tau)$ define las tasas de transmisión (red/hogar), recuperación, umbral espacial y desplazamiento temporal ($\tau$). Los casos reportados $\hat C(t)$ se obtienen escalando la incidencia simulada $\hat I$:
+\[
+\hat C(t)=s\hat I(t-\tau).
+\]
+Así, el modelo reproduce la forma de la curva y el coeficiente $s$ la escala a la magnitud observada.
+
+\section*{Resultados y Discusión}
+
+El experimento espacial compara dos regímenes. El régimen restrictivo utiliza un umbral de distancia más pequeño y produce un brote más plano. El régimen más libre utiliza un umbral de distancia más grande y produce un brote más pronunciado. La Tabla~\ref{tab:spatial_results} resume la comparación cuantitativa final.
+
+\begin{table}[H]
+\centering
+\small
+\caption{Comparación entre los regímenes espaciales restrictivo y más libre.}
+\label{tab:spatial_results}
+\begin{tabular}{lcc}
+\toprule
+Métrica & Restrictivo & Libre \\
+\midrule
+Pico & $1241\pm282$ & $7523\pm331$ \\
+Acumulado & $35380\pm6605$ & $76344\pm1284$ \\
+$I$ final & $244\pm194$ & $0\pm0$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Los resultados confirman el mecanismo cualitativo esperado (Fig.~\ref{fig:spatial_curves}). Una restricción espacial más fuerte ralentiza la epidemia y reduce el pico, mientras que una mezcla más libre aumenta la conectividad efectiva y concentra las infecciones en un pico más alto y temprano.
+
+\articlefigure{infectados_mu_small_vs_mu_infty2.png}{0.95}{Dinámica de infección bajo regímenes espaciales restrictivos y más libres. Una mezcla espacial más libre produce un pico de infección sustancialmente más alto y temprano.}{fig:spatial_curves}
+
+La comparación del subrogado muestra que el LSTM es la arquitectura más fiable tanto para escenarios de corta como de larga distancia (Figs.~\ref{fig:short_distance_comparison}--\ref{fig:long_distance_comparison}). En el régimen de corta distancia ($\mu=5.0$), la epidemia es más local y ruidosa, y el LSTM sigue la curva del simulador con $R^2=0.951$. En el régimen de larga distancia ($\mu=15.0$), la epidemia se propaga más libremente y el LSTM alcanza $R^2=0.975$. El error residual se mantiene bajo y estable en ambos regímenes (Fig.~\ref{fig:error_boxplot}).
+
+\articlefigure{comparativa_corta_distancia.png}{0.92}{Comparación del subrogado en el régimen de corta distancia.}{fig:short_distance_comparison}
+\articlefigure{comparativa_larga_distancia.png}{0.92}{Comparación del subrogado en el régimen de larga distancia.}{fig:long_distance_comparison}
+\articlefigure{boxplot_errores_modelos.png}{0.92}{Distribución de errores de los modelos subrogados en los regímenes de corta y larga distancia. El LSTM muestra la distribución de error más pequeña y estable.}{fig:error_boxplot}
+
+La comparación de velocidad también confirma el valor del subrogado. La inferencia del Autoencoder tarda aproximadamente 0.03 s por curva, la inferencia del LSTM tarda aproximadamente 0.05 s por curva, mientras que una simulación SBM tarda aproximadamente 3.5 s por curva.
+
+El experimento de ajuste final utiliza datos de monitoreo de COVID-19 de San Petersburgo para el invierno de 2022. Tanto el subrogado LSTM como el modelo SBM asistido por el subrogado reproducen el pico epidémico principal (Fig.~\ref{fig:combined_fit}).
+
+\begin{table}[H]
+\centering
+\small
+\caption{Rendimiento del ajuste con datos reales.}
+\label{tab:real_fit}
+\begin{tabular}{lcc}
+\toprule
+Modelo & $R^2$ & Tiempo de ajuste \\
+\midrule
+Subrogado LSTM & 0.915 & $\sim 31$ s \\
+Subrogado + SBM & $\approx 0.890$ & $\sim 187$ s \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\articlefigure{combined_wave_winter_fit.png}{0.92}{Ajuste empírico del subrogado y del modelo SBM a los datos de monitoreo de COVID-19 de San Petersburgo, invierno de 2022.}{fig:combined_fit}
+
+El ajuste asistido por el subrogado es aproximadamente $6\times$ más rápido que la validación basada en el simulador con semilla en el subrogado. Este resultado respalda la estrategia híbrida propuesta.
+
+Los resultados demuestran un claro compromiso entre la fidelidad mecanicista y la eficiencia computacional. El simulador SBM original obtiene un ajuste mecanicista ligeramente mejor, pero el subrogado reduce sustancialmente el tiempo de calibración. Por esta razón, el uso combinado de ambos modelos es metodológicamente conveniente: el subrogado permite una búsqueda rápida de parámetros y el simulador original permite una validación final más fiel al mecanismo epidémico de la red.
+
+\section*{Conclusión}
+
+El marco propuesto proporciona un enfoque compacto y computacionalmente eficiente para estudiar la propagación de epidemias en poblaciones urbanas con estructura espacial. El modelo no es una reconstrucción completa basada en individuos de una ciudad. En su lugar, es un modelo agregado optimizado que conserva el papel esencial de la estructura de contacto espacial, la interacción mediada por hubs y los grupos de población móvil.
+
+El principal hallazgo es que el modelo reproduce el efecto cualitativo esperado de la mezcla espacial. Las estructuras de contacto restrictivas generan brotes más planos y prolongados, mientras que las estructuras de contacto más libres generan picos epidémicos más agudos y elevados. Este resultado es consistente con la literatura de modelado espacial de epidemias y respalda el uso de modelos de red agregados como herramientas de prueba de concepto interpretables.
+
+El modelo subrogado de inteligencia artificial aproxima con éxito las curvas epidémicas generadas por el simulador original y permite una exploración de parámetros más rápida. La comparación final muestra que el simulador original proporciona un rendimiento de ajuste ligeramente mejor, mientras que el modelo subrogado ofrece una clara ventaja computacional. Por lo tanto, la estrategia más práctica no es elegir un modelo sobre el otro, sino combinarlos: el modelo subrogado puede utilizarse para una calibración rápida, y el simulador original puede emplearse para el refinamiento mecanicista final.
+
+El trabajo futuro puede aprovechar el potencial modular del marco propuesto para ampliar su alcance. En particular, la red neuronal podría incorporar nuevos parámetros de entrada relacionados con la estructura de la red, la movilidad y las condiciones iniciales, lo que permitiría la representación de escenarios epidémicos más diversos. Del mismo modo, la aplicación del modelo a otras curvas epidemiológicas reportadas permitiría evaluar su robustez en diferentes contextos. Finalmente, el análisis de su capacidad predictiva fortalecería su utilidad como herramienta de exploración rápida, calibración y apoyo al estudio de escenarios futuros.
+
+
+\section*{Referencias}
+
+\begin{small}
+
+
+1. Pujante-Otalora L., Canovas-Segura B., Campos M., Juarez J.M. The use of networks in spatial and temporal computational models for outbreak spread in epidemiology: A systematic review // Journal of Biomedical Informatics. 2023. Vol. 143. Art. 104422. DOI: 10.1016/j.jbi.2023.104422.
+
+2. Ye Y., Pandey A., Bawden C.E., Sumsuzzman D.M., Rajput R., Shoukat A., Singer B.H., Moghadas S.M., Galvani A.P. Integrating artificial intelligence with mechanistic epidemiological modeling: A scoping review of opportunities and challenges // Nature Communications. 2025. Vol. 16. Art. 581. DOI: 10.1038/s41467-024-55461-x.
+
+3. Chen S., Janies D., Paul R., Thill J.-C. Leveraging advances in data-driven deep learning methods for hybrid epidemic modeling // Epidemics. 2024. Vol. 48. Art. 100782. DOI: 10.1016/j.epidem.2024.100782.
+
+4. Lee C., Wilkinson D.J. A review of stochastic block models and extensions for graph clustering // Applied Network Science. 2019. Vol. 4. Art. 122. DOI: 10.1007/s41109-019-0232-2.
+
+5. Leonenko V.N., Arzamastsev S., Bobashev G. Contact patterns and influenza outbreaks in Russian cities: A proof-of-concept study via agent-based modeling // Journal of Computational Science. 2020. Vol. 44. Art. 101156. DOI: 10.1016/j.jocs.2020.101156.
+
+6. Leonenko V.N., Lobachev A., Bobashev G.V. Spatial modeling of influenza outbreaks in Saint Petersburg using synthetic populations // Lecture Notes in Computer Science. 2019. Vol. 11536. P. 492–505. DOI: 10.1007/978-3-030-22734-0\_36.
+
+7. Ajelli M., Litvinova M. Estimating contact patterns relevant to the spread of infectious diseases in Russia // Journal of Theoretical Biology. 2017. Vol. 419. P. 1–7. DOI: 10.1016/j.jtbi.2017.01.041.
+
+8. Korzin A., Leonenko V. Lightweight Models for Influenza and COVID-19 Prediction in Heterogeneous Populations: A Trade-Off Between Performance and Level of Detail // Mathematics. 2025. Vol. 13, No. 9. Art. 1385. DOI: 10.3390/math13091385.
+
+9. Neal Z.P., Neal J.W. Illustrating the importance of edge constraints in backbones of bipartite projections // PLoS ONE. 2024. Vol. 19, No. 5. Art. e0302973. DOI: 10.1371/journal.pone.0302973.
+
+10. Wang W., Nie Y., Li W., Lin T., Shang M., Su S., Tang Y., Zhang Y., Sun G.-Q. Epidemic spreading on higher-order networks // Physics Reports. 2024. Vol. 1056. P. 1–70. DOI: 10.1016/j.physrep.2024.01.003.
+
+11. Chen Y., Liu Y., Tang M., Lai Y.-C. Epidemic dynamics with non-Markovian travel in multilayer networks // Communications Physics. 2023. Vol. 6. Art. 263. DOI: 10.1038/s42005-023-01369-9.
+
+12. Tahmasbi B., Roozkhosh F., Yao X.A. Encounter Network and Its Application to Studying Epidemic Spread through Public Transportation Networks // Transportation Research Record. 2024. Vol. 2678, No. 11. P. 203–215. DOI: 10.1177/03611981241240770.
+
+13. Das H.K., Stolerman L.M. Epidemic Thresholds and Disease Dynamics in Metapopulations: The Role of Network Structure and Human Mobility // SIAM Journal on Applied Dynamical Systems. 2024. Vol. 23, No. 2. P. 1579–1609. DOI: 10.1137/23M1579522.
+
+14. Alarid-Escudero F., Andrews J.R., Goldhaber-Fiebert J.D. Effects of Mitigation and Control Policies in Realistic Epidemic Models Accounting for Household Transmission Dynamics // Medical Decision Making. 2024. Vol. 44, No. 1. P. 5–17. DOI: 10.1177/0272989X231205565.
+
+15. Kiss I.Z., Simon P.L. On Parameter Identifiability in Network-Based Epidemic Models // Bulletin of Mathematical Biology. 2023. Vol. 85. Art. 18. DOI: 10.1007/s11538-023-01121-y.
+
+16. Darwish A., Leonenko V.N. Reducing computational costs of agent-based modeling of respiratory infection spread using a machine learning-based surrogate model // Scientific and Technical Journal of Information Technologies, Mechanics and Optics. 2026. Vol. 26, No. 1. P. 177–184. DOI: 10.17586/2226-1494-2026-26-1-177-184.
+
+17. Kurul E., Tunç H., Sari M., Güzel N. Deep learning aided surrogate modeling of the epidemiological models // Journal of Computational Science. 2025. Vol. 84. Art. 102470. DOI: 10.1016/j.jocs.2024.102470.
+
+18. Gaskin T., Conrad T., Pavliotis G.A., Schütte C. Neural parameter calibration and uncertainty quantification for epidemic forecasting // PLoS ONE. 2024. Vol. 19, No. 10. Art. e0306704. DOI: 10.1371/journal.pone.0306704.
+
+19. Robinson B., Bisaillon P., Edwards J.D., Kendzerska T., Khalil M., Poirel D., Sarkar A. A Bayesian model calibration framework for stochastic compartmental models with both time-varying and time-invariant parameters // Infectious Disease Modelling. 2024. Vol. 9, No. 4. P. 1224–1249. DOI: 10.1016/j.idm.2024.04.002.
+
+20. Stenger M., Leppich R., Foster I., Kounev S., Bauer A. Evaluation is key: A survey on evaluation measures for synthetic time series // Journal of Big Data. 2024. Vol. 11. Art. 66. DOI: 10.1186/s40537-024-00924-7.
+
+21. Singh P.K., Farrell-Maupin K.A., Faghihi D. A framework for strategic discovery of credible neural network surrogate models under uncertainty // Computer Methods in Applied Mechanics and Engineering. 2024. Vol. 427. Art. 117061. DOI: 10.1016/j.cma.2024.117061.
+
+22. Al Meslamani A.Z., Sobrino I., de la Fuente J. Machine learning in infectious diseases: Potential applications and limitations // Annals of Medicine. 2024. Vol. 56, No. 1. Art. 2362869. DOI: 10.1080/07853890.2024.2362869.
+
+23. Wang M.H., Onnela J.-P. Accounting for contact network uncertainty in epidemic inferences with Approximate Bayesian Computation // Applied Network Science. 2025. Vol. 10. Art. 13. DOI: 10.1007/s41109-025-00694-y.
+
+\end{small}
+\end{document}
