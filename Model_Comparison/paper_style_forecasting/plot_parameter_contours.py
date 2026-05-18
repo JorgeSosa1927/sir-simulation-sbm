@@ -97,9 +97,9 @@ def main():
                 row[key] = th[i]
             all_params.append(row)
 
-    df = pd.DataFrame(all_params)
+    df_all = pd.DataFrame(all_params)
     
-    print("\n[PLOT] Generating Corner Plot with Seaborn...")
+    print("\n[PLOT] Generating Separate Corner Plots with Seaborn...")
     
     # Set seaborn style
     sns.set_theme(style="ticks")
@@ -107,41 +107,45 @@ def main():
                "at_peak (t)": "darkorange", 
                "post_peak (t+14)": "green"}
                
-    # Create the PairGrid
-    g = sns.PairGrid(df, hue="Scenario", palette=palette, corner=True, height=2.5)
-    
-    # Map the lower triangle to KDE contour plots
-    g.map_lower(sns.kdeplot, fill=True, alpha=0.5, levels=4, warn_singular=False)
-    
-    # Map the diagonal to KDE density plots
-    g.map_diag(sns.kdeplot, fill=True, linewidth=2, alpha=0.6, warn_singular=False)
-    
-    # Add the True Target Value markers
-    for i in range(4):
-        for j in range(4):
-            if i >= j:
-                ax = g.axes[i, j]
-                key_x = KEYS[j]
-                key_y = KEYS[i]
-                
-                # Plot true value lines
-                if i == j:
-                    ax.axvline(BASELINE[key_x], color="red", ls="--", lw=2, zorder=10)
-                else:
-                    ax.axvline(BASELINE[key_x], color="red", ls="--", lw=1.5, alpha=0.7, zorder=10)
-                    ax.axhline(BASELINE[key_y], color="red", ls="--", lw=1.5, alpha=0.7, zorder=10)
-                    ax.plot(BASELINE[key_x], BASELINE[key_y], marker="*", color="red", markersize=12, zorder=11)
+    for scenario_name in df_all["Scenario"].unique():
+        df_sub = df_all[df_all["Scenario"] == scenario_name]
+        color = palette[scenario_name]
+        
+        # Create the PairGrid
+        g = sns.PairGrid(df_sub, corner=True, height=2.5)
+        
+        # Map the lower triangle to KDE contour plots
+        g.map_lower(sns.kdeplot, color=color, fill=True, alpha=0.5, levels=4, warn_singular=False)
+        
+        # Map the diagonal to KDE density plots
+        g.map_diag(sns.kdeplot, color=color, fill=True, linewidth=2, alpha=0.6, warn_singular=False)
+        
+        # Add the True Target Value markers
+        for i in range(4):
+            for j in range(4):
+                if i >= j:
+                    ax = g.axes[i, j]
+                    key_x = KEYS[j]
+                    key_y = KEYS[i]
+                    
+                    # Plot true value lines
+                    if i == j:
+                        ax.axvline(BASELINE[key_x], color="red", ls="--", lw=2, zorder=10)
+                    else:
+                        ax.axvline(BASELINE[key_x], color="red", ls="--", lw=1.5, alpha=0.7, zorder=10)
+                        ax.axhline(BASELINE[key_y], color="red", ls="--", lw=1.5, alpha=0.7, zorder=10)
+                        ax.plot(BASELINE[key_x], BASELINE[key_y], marker="*", color="red", markersize=12, zorder=11)
 
-    g.add_legend(title="Forecasting Origin", bbox_to_anchor=(0.7, 0.7), loc='center', fontsize=12, title_fontsize=14)
-    
-    # Add title
-    g.figure.suptitle("Parameter Confidence Contours (Posterior Distribution Evolution)", 
-                      fontsize=18, y=1.02, fontweight="bold")
-    
-    out_png = os.path.join(OUTPUT_DIR, "parameter_confidence_contours.png")
-    plt.savefig(out_png, dpi=300, bbox_inches="tight")
-    plt.close()
-    print(f"  [PLOT] Saved confidence contour plot -> {out_png}")
+        # Add title
+        g.figure.suptitle(f"Parameter Confidence Contours | {scenario_name}", 
+                          fontsize=18, y=1.02, fontweight="bold")
+        
+        safe_name = scenario_name.replace(" ", "_").replace("(", "").replace(")", "").replace("+", "plus").replace("-", "minus")
+        out_png = os.path.join(OUTPUT_DIR, f"parameter_confidence_contours_{safe_name}.png")
+        plt.savefig(out_png, dpi=300, bbox_inches="tight")
+        plt.close()
+        print(f"  [PLOT] Saved confidence contour plot -> {out_png}")
+        
     print("=" * 60)
 
 if __name__ == "__main__":

@@ -69,7 +69,7 @@
     \centering
     \IfFileExists{#1}
         {\includegraphics[width=#2\linewidth]{#1}}
-        {\fbox{\parbox[c][38mm][c]{#2\linewidth}{\centering Marcador de posición:\\ \texttt{#1}}}}
+        {\fbox{\parbox[c][38mm][c]{#2\linewidth}{\centering Marcador de posición:\\ \texttt{\detokenize{#1}}}}}
     \caption{#3}
     \label{#4}
 \end{figure}
@@ -80,7 +80,7 @@
     \centering
     \IfFileExists{#1}
         {\includegraphics[width=#2\textwidth]{#1}}
-        {\fbox{\parbox[c][45mm][c]{#2\textwidth}{\centering Marcador de posición:\\ \texttt{#1}}}}
+        {\fbox{\parbox[c][45mm][c]{#2\textwidth}{\centering Marcador de posición:\\ \texttt{\detokenize{#1}}}}}
     \caption{#3}
     \label{#4}
 \end{figure*}
@@ -195,7 +195,7 @@ p_{\mathrm{final}}=1-\prod_m(1-p_m),
 \]
 donde $p_m$ es la probabilidad por mecanismo. Esta forma asegura que la probabilidad final sea la unión de todos los canales posibles.
 
-\articlefigure{simple_sbm_comparison.png}{0.95}{Red espacial agregada original y proyectada. La red original contiene bloques sociales, hubs y bloques no sociales. La red proyectada elimina los hubs y los reemplaza por enlaces efectivos entre bloques.}{fig:network_projection}
+\articlefigure{output/simple_sbm_comparison.png}{0.95}{Red espacial agregada original y proyectada. La red original contiene bloques sociales, hubs y bloques no sociales. La red proyectada elimina los hubs y los reemplaza por enlaces efectivos entre bloques.}{fig:network_projection}
 
 \section*{Proyección de Hubs y Pesos de los Enlaces}
 
@@ -366,13 +366,13 @@ $I$ final & $244\pm194$ & $0\pm0$ \\
 
 Los resultados confirman el mecanismo cualitativo esperado (Fig.~\ref{fig:spatial_curves}). Una restricción espacial más fuerte ralentiza la epidemia y reduce el pico, mientras que una mezcla más libre aumenta la conectividad efectiva y concentra las infecciones en un pico más alto y temprano.
 
-\articlefigure{infectados_mu_small_vs_mu_infty2.png}{0.95}{Dinámica de infección bajo regímenes espaciales restrictivos y más libres. Una mezcla espacial más libre produce un pico de infección sustancialmente más alto y temprano.}{fig:spatial_curves}
+\articlefigure{output/infectados_mu_small_vs_mu_infty.png}{0.95}{Dinámica de infección bajo regímenes espaciales restrictivos y más libres. Una mezcla espacial más libre produce un pico de infección sustancialmente más alto y temprano.}{fig:spatial_curves}
 
 La comparación del subrogado muestra que el LSTM es la arquitectura más fiable tanto para escenarios de corta como de larga distancia (Figs.~\ref{fig:short_distance_comparison}--\ref{fig:long_distance_comparison}). En el régimen de corta distancia ($\mu=5.0$), la epidemia es más local y ruidosa, y el LSTM sigue la curva del simulador con $R^2=0.951$. En el régimen de larga distancia ($\mu=15.0$), la epidemia se propaga más libremente y el LSTM alcanza $R^2=0.975$. El error residual se mantiene bajo y estable en ambos regímenes (Fig.~\ref{fig:error_boxplot}).
 
-\articlefigure{comparativa_corta_distancia.png}{0.92}{Comparación del subrogado en el régimen de corta distancia.}{fig:short_distance_comparison}
-\articlefigure{comparativa_larga_distancia.png}{0.92}{Comparación del subrogado en el régimen de larga distancia.}{fig:long_distance_comparison}
-\articlefigure{boxplot_errores_modelos.png}{0.92}{Distribución de errores de los modelos subrogados en los regímenes de corta y larga distancia. El LSTM muestra la distribución de error más pequeña y estable.}{fig:error_boxplot}
+\articlefigure{output/ai_sbm/comparativa_corta_distancia.png}{0.92}{Comparación del subrogado en el régimen de corta distancia.}{fig:short_distance_comparison}
+\articlefigure{output/ai_sbm/comparativa_larga_distancia.png}{0.92}{Comparación del subrogado en el régimen de larga distancia.}{fig:long_distance_comparison}
+\articlefigure{output/ai_sbm/boxplot_errores_modelos.png}{0.92}{Distribución de errores de los modelos subrogados en los regímenes de corta y larga distancia. El LSTM muestra la distribución de error más pequeña y estable.}{fig:error_boxplot}
 
 La comparación de velocidad también confirma el valor del subrogado. La inferencia del Autoencoder tarda aproximadamente 0.03 s por curva, la inferencia del LSTM tarda aproximadamente 0.05 s por curva, mientras que una simulación SBM tarda aproximadamente 3.5 s por curva.
 
@@ -393,7 +393,7 @@ Subrogado + SBM & $\approx 0.890$ & $\sim 187$ s \\
 \end{tabular}
 \end{table}
 
-\articlefigure{combined_wave_winter_fit.png}{0.92}{Ajuste empírico del subrogado y del modelo SBM a los datos de monitoreo de COVID-19 de San Petersburgo, invierno de 2022.}{fig:combined_fit}
+\articlefigure{output/ai_sbm/english/combined_wave_winter_fit.png}{0.92}{Ajuste empírico del subrogado y del modelo SBM a los datos de monitoreo de COVID-19 de San Petersburgo, invierno de 2022.}{fig:combined_fit}
 
 El ajuste asistido por el subrogado es aproximadamente $6\times$ más rápido que la validación basada en el simulador con semilla en el subrogado. Este resultado respalda la estrategia híbrida propuesta.
 

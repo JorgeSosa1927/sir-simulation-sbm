@@ -24,7 +24,7 @@ import matplotlib.pyplot as plt
 
 from paper_style_forecasting.generate_sbm_target import generate_synthetic_target
 from paper_style_forecasting.paper_style_utils import (
-    load_surrogate, calibrate, generate_forecast,
+    load_surrogate, calibrate, generate_forecast, simulate_curve,
     calc_metrics, MODE, TOP_K, TMAX
 )
 
@@ -33,39 +33,72 @@ os.makedirs(OUTPUT_DIR, exist_ok=True)
 
 # ── CONFIGURATION ──────────────────────────────────────────
 # Define predictability loss threshold.
-# If the band (P90-P10) is larger than RBW_THRESHOLD * Median, it's unpredictable.
-RBW_THRESHOLD = 1.0
+# If the band (P90-P10) is larger than RBW_THRESHOLD times the global
+# predicted peak, the forecast is treated as unpredictable.
+RBW_THRESHOLD = 0.75
 # Minimum threshold for median to avoid division by zero artifacts at the tail
 MIN_MEDIAN_VAL = 1e-4
 
-def calculate_predictability_horizon(fm_median, p10, p90):
+def calculate_predictability_horizon(fm_median, p10, p90, reference_peak):
     """
     Returns the number of days (H_max) until the prediction becomes unreliable.
-    Unreliable is defined as:
-    (P90 - P10) / Median > RBW_THRESHOLD
+    Unreliable is defined by the global relative bandwidth:
+    (P90 - P10) / reference_peak > RBW_THRESHOLD
+
+    The local relative bandwidth is also returned for diagnostics:
+    (P90 - P10) / Median
     """
-    rbw = []
+    global_rbw = []
+    local_rbw = []
     h_max = None
+    if reference_peak <= 0:
+        raise ValueError("reference_peak must be positive.")
+
     for h, (med, lower, upper) in enumerate(zip(fm_median, p10, p90)):
+        spread = upper - lower
+        global_val = spread / reference_peak
+
         if med < MIN_MEDIAN_VAL:
             # If median is extremely small, we are at the tail.
             # We look at the absolute spread. If spread is large while median is tiny, it's useless.
-            if upper - lower > MIN_MEDIAN_VAL * 10:
-                val = float('inf')
+            if spread > MIN_MEDIAN_VAL * 10:
+                local_val = float('inf')
             else:
-                val = 0.0
+                local_val = 0.0
         else:
-            val = (upper - lower) / med
-        rbw.append(val)
+            local_val = spread / med
+
+        global_rbw.append(global_val)
+        local_rbw.append(local_val)
         
         # Determine H_max if not already found
-        if h_max is None and val > RBW_THRESHOLD:
+        if h_max is None and global_val > RBW_THRESHOLD:
             h_max = h
             
     if h_max is None:
         h_max = len(fm_median) # Fully predictable until the end
         
-    return rbw, h_max
+    return global_rbw, local_rbw, h_max
+
+
+def predicted_global_peak(top_params):
+    """
+    Estimate the global scale of the predicted epidemic curve from t=0..TMAX.
+    Uses the median trajectory across the accepted parameter set, not only the
+    future forecast segment.
+    """
+    full_curves = []
+    for _, th in top_params:
+        curve = simulate_curve(th)
+        if len(curve) < TMAX:
+            curve = np.pad(curve, (0, TMAX - len(curve)), "edge")
+        full_curves.append(curve[:TMAX])
+
+    if not full_curves:
+        raise RuntimeError("No valid full predicted trajectories.")
+
+    median_full_curve = np.median(np.array(full_curves), axis=0)
+    return float(np.max(median_full_curve))
 
 def plot_predictability(all_data, t_peak, out_path):
     fig, axes = plt.subplots(3, 1, figsize=(12, 16))
@@ -112,7 +145,8 @@ def plot_predictability(all_data, t_peak, out_path):
         
     axes[-1].set_xlabel("Time step", fontsize=11)
     fig.suptitle(
-        f"Predictability Horizon Analysis (Saturation Threshold = {RBW_THRESHOLD})\n"
+        f"Predictability Horizon Analysis "
+        f"(Threshold = {RBW_THRESHOLD} x predicted global peak)\n"
         f"MODE={MODE}  |  Target Peak = {t_peak}", 
         fontsize=15, y=1.01
     )
@@ -224,8 +258,12 @@ def main():
         mat, fm_mean, fm_median, p10, p90 = generate_forecast(top, known, horizon=horizon)
         
         # Predictability Analysis
-        rbw_curve, h_max = calculate_predictability_horizon(fm_median, p10, p90)
+        reference_peak_predicted = predicted_global_peak(top)
+        global_rbw_curve, local_rbw_curve, h_max = calculate_predictability_horizon(
+            fm_median, p10, p90, reference_peak_predicted
+        )
         print(f"  -> Predictable Horizon (H_max): {h_max} days")
+        print(f"  -> Predicted reference peak: {reference_peak_predicted:.6f}")
         
         all_plot_data.append({
             "sc": sc,
@@ -236,12 +274,16 @@ def main():
             "p90": p90,
             "mat": mat,
             "h_max": h_max,
-            "rbw": rbw_curve,
+            "global_rbw": global_rbw_curve,
+            "local_rbw": local_rbw_curve,
+            "reference_peak_predicted": reference_peak_predicted,
             "top_params": top
         })
         
         # Collect stats
-        for h_idx, (med, p_low, p_high, rbw_val) in enumerate(zip(fm_median, p10, p90, rbw_curve)):
+        for h_idx, (med, p_low, p_high, global_rbw_val, local_rbw_val) in enumerate(
+            zip(fm_median, p10, p90, global_rbw_curve, local_rbw_curve)
+        ):
             stats_rows.append({
                 "scenario": name,
                 "t_origin": t_cut,
@@ -251,7 +293,9 @@ def main():
                 "forecast_median": med,
                 "p10": p_low,
                 "p90": p_high,
-                "relative_bandwidth": rbw_val,
+                "reference_peak_predicted": reference_peak_predicted,
+                "global_relative_bandwidth": global_rbw_val,
+                "local_relative_bandwidth": local_rbw_val,
                 "is_predictable": h_idx < h_max
             })
 
